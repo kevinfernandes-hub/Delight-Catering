@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  phone      String
+  address    String
+  notes      String?
+  created_at DateTime @default(now())
+  orders     Order[]
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  name        String
+  category    String // Appetizers, Mains, Sides, Desserts, Packages
+  description String?
+  price       Float
+  unit        String   @default("per plate")
+  available   Boolean  @default(true)
+  created_at  DateTime @default(now())
+}
+
+model Order {
+  id           String    @id @default(cuid())
+  customer_id  String
+  customer     Customer  @relation(fields: [customer_id], references: [id])
+  event_date   DateTime
+  event_type   String
+  guest_count  Int
+  status       String    @default("Pending") // Pending, Confirmed, In-Progress, Completed, Cancelled
+  total_amount Float
+  venue        String
+  notes        String?
+  created_at   DateTime  @default(now())
+  invoice      Invoice?
+}
+
+model Invoice {
+  id             String    @id @default(cuid())
+  order_id       String    @unique
+  order          Order     @relation(fields: [order_id], references: [id])
+  invoice_number String    @unique // INV-1001...
+  issue_date     DateTime  @default(now())
+  due_date       DateTime
+  subtotal       Float
+  tax_rate       Float     @default(0.08)
+  tax_amount     Float
+  total          Float
+  status         String    @default("Unpaid") // Unpaid, Paid
+  paid_date      DateTime?
+  created_at     DateTime  @default(now())
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String
+  event_type  String
+  event_date  DateTime
+  guest_count Int
+  message     String
+  created_at  DateTime @default(now())
+}
