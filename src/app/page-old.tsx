@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import GoogleReviewsCarousel from '@/components/home/GoogleReviewsCarousel';
 
 // Particle class moved outside component to fix lint
 class Particle {
@@ -313,7 +312,21 @@ export default function Home() {
 
       <section id="testimonials">
         <div className="container reveal">
-          <GoogleReviewsCarousel businessId="delight-caterers" />
+          <span className="quote-icon">&ldquo;</span>
+          <div className="carousel-container">
+            {[
+              { text: '&ldquo;Excellent management and the taste of the food is very delicious.&rdquo;', author: 'Suraj Gawande', event: 'Satisfied Customer' },
+              { text: '&ldquo;Their Chicken Biryani is absolutely fantastic. Highly recommended!&rdquo;', author: 'Local Reviewer', event: 'Birthday Party' },
+              { text: '&ldquo;The staff is very polite and well-behaved. Very professional.&rdquo;', author: 'Verified Review', event: 'Wedding Reception' },
+              { text: '&ldquo;With a 4.8-star rating, Delight Caterers remains Nagpur&apos;s top choice.&rdquo;', author: 'Justdial Highlights', event: 'Community Favorite' },
+            ].map((t, i) => (
+              <div key={i} className={`testimonial-slide ${currentSlide === i ? 'active' : ''}`}>
+                <p className="testimonial-text" dangerouslySetInnerHTML={{ __html: t.text }}></p>
+                <p className="testimonial-author">{t.author}</p>
+                <p className="testimonial-event">{t.event}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -340,7 +353,7 @@ export default function Home() {
           <p style={{ color: 'var(--color-ivory)', marginBottom: '2rem', fontSize: '1.2rem' }}>
             Flat No 2, Shakun Apartment, Sheela Nagar Colony, Katol Road.
           </p>
-          <a href="tel:07947150211" className="btn btn-gold btn-glowing hover-target">Call 07947150211</a>
+          <a href="tel:9689330035" className="btn btn-gold btn-glowing hover-target">Call 9689330035</a>
         </div>
       </section>
 
