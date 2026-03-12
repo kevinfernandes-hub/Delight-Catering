@@ -47,7 +47,7 @@ const InvoiceModal = ({ invoice, onClose }: { invoice: any, onClose: () => void 
                 <div className="company-info">
                   <p>Flat No 2, Shakun Apartment, Sheela Nagar Colony</p>
                   <p>Katol Road, Nagpur, Maharashtra</p>
-                  <p>Phone: 07947150211 | Email: hello@delight.com</p>
+                  <p>Phone: 9689330035 | Email: hello@delight.com</p>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
