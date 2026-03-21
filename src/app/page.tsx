@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import GoogleReviewsCarousel from '@/components/home/GoogleReviewsCarousel';
+import { CardContainer, CardBody, CardItem } from '@/components/ui/3d-card';
+import { galleryImages } from '@/lib/galleryConfig';
 
 // Particle class moved outside component to fix lint
 class Particle {
@@ -41,6 +43,114 @@ class Particle {
     ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+// MenuCard Component with 3D effect
+function MenuCard({
+  image,
+  category,
+  title,
+  description,
+  delay,
+}: {
+  image: string;
+  category: string;
+  title: string;
+  description: string;
+  delay: string;
+}) {
+  return (
+    <CardContainer 
+      containerClassName="!py-0"
+      className="w-full h-80 reveal" 
+    >
+      <CardBody className="!w-full !h-full bg-gray-900 border border-white/[0.2] rounded-xl overflow-hidden relative">
+        <CardItem translateZ={100} className="w-full h-full absolute top-0 left-0">
+          <img
+            src={image}
+            alt={title}
+            className="h-full w-full object-cover"
+          />
+        </CardItem>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/30 z-10"></div>
+        <CardItem 
+          translateZ={50} 
+          as="div" 
+          className="absolute bottom-0 left-0 right-0 px-6 py-6 z-20 w-full"
+        >
+          <span className="text-gold text-sm font-semibold block mb-2">{category}</span>
+          <h3 className="text-white text-2xl font-bold mb-2">{title}</h3>
+          <p className="text-gray-300 text-sm">{description}</p>
+        </CardItem>
+      </CardBody>
+    </CardContainer>
+  );
+}
+
+// Interactive Statistics Counter Component
+function StatCounter({ stat, index }: { stat: { target: number; suffix: string; label: string; icon: string }; index: number }) {
+  const [count, setCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+        observer.unobserve(entry.target);
+      }
+    }, { threshold: 0.1 });
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const duration = 2000;
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      const easeOutQuad = 1 - Math.pow(1 - progress, 2);
+      const current = Math.floor(stat.target * easeOutQuad * 10) / 10;
+      setCount(current);
+
+      if (progress === 1) clearInterval(interval);
+    }, 16);
+
+    return () => clearInterval(interval);
+  }, [isVisible, stat.target]);
+
+  return (
+    <div
+      ref={ref}
+      className="stat-item reveal"
+      style={{
+        animation: isVisible ? `slideUp 0.6s ease-out ${index * 0.15}s both` : 'none',
+      }}
+      onMouseEnter={(e) => {
+        const target = e.currentTarget;
+        target.style.animation = 'pulse-glow 1.5s infinite';
+      }}
+      onMouseLeave={(e) => {
+        const target = e.currentTarget;
+        target.style.animation = 'none';
+      }}
+    >
+      <div className="stat-number">
+        {count.toLocaleString('en-IN', { maximumFractionDigits: 1 })}{stat.suffix}
+      </div>
+      <p className="stat-label">{stat.label}</p>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -205,7 +315,7 @@ export default function Home() {
             <span style={{ animationDelay: '1.1s' }} className="italic-word">Craft </span>
             <span style={{ animationDelay: '1.3s' }}>Memories.</span>
           </h1>
-          <p className="hero-subtext">Premium catering for weddings, corporate events & exclusive celebrations.</p>
+          <p className="hero-subtext">Quality food & best catering services in Nagpur. Premium catering for weddings, corporate events & exclusive celebrations.</p>
           <div className="hero-ctas">
             <a href="#menu" className="btn btn-gold hover-target">Explore Menu</a>
             <a href="#cta" className="btn btn-ghost hover-target">Request a Quote</a>
@@ -231,7 +341,7 @@ export default function Home() {
           <div className="about-content reveal reveal-right">
             <span className="section-tag">Our Story</span>
             <h2>Culinary Artistry, Delivered.</h2>
-            <p>At Delight Caterers, we believe that food is more than nourishment—it is an experience, a statement, and a memory in the making.</p>
+            <p>At Delight Caterers, we believe that food is more than nourishment—it is an experience, a statement, and a memory in the making. Serving Nagpur and nearby areas with exceptional catering services.</p>
             <div className="stats-row">
               <div className="stat"><h3>18+</h3><p>Years of Experience</p></div>
               <div className="stat"><h3>4.8/5</h3><p>Star Rating</p></div>
@@ -241,37 +351,34 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="menu">
+      <section id="menu" style={{ overflow: 'hidden' }}>
         <div className="container">
           <div className="section-header reveal">
             <span className="section-tag">Curated Selections</span>
             <h2>A Taste of Elegance.</h2>
           </div>
           <div className="menu-grid">
-            <div className="menu-card reveal" style={{ transitionDelay: '0.1s' }}>
-              <div className="menu-bg" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800')" }}></div>
-              <div className="menu-card-content">
-                <span className="menu-category">Snacks & Starters</span>
-                <h3>Non-Veg Delights</h3>
-                <p>A tantalizing selection of premium non-veg snacks.</p>
-              </div>
-            </div>
-            <div className="menu-card reveal" style={{ transitionDelay: '0.3s' }}>
-              <div className="menu-bg" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800')" }}></div>
-              <div className="menu-card-content">
-                <span className="menu-category">Main Course</span>
-                <h3>Signature Chicken Biryani</h3>
-                <p>Our most praised dish slow-cooked to perfection.</p>
-              </div>
-            </div>
-            <div className="menu-card reveal" style={{ transitionDelay: '0.5s' }}>
-              <div className="menu-bg" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1621841957884-1210fe19b66d?auto=format&fit=crop&q=80&w=800')" }}></div>
-              <div className="menu-card-content">
-                <span className="menu-category">Buffet Service</span>
-                <h3>Indian & Chinese Flavors</h3>
-                <p>A grand buffet spread of North Indian and Chinese delicacies.</p>
-              </div>
-            </div>
+            <MenuCard 
+              delay="0.1s"
+              image="https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800"
+              category="Snacks & Starters"
+              title="Non-Veg Delights"
+              description="A tantalizing selection of premium non-veg snacks."
+            />
+            <MenuCard 
+              delay="0.3s"
+              image="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800"
+              category="Main Course"
+              title="Signature Chicken Biryani"
+              description="Our most praised dish slow-cooked to perfection."
+            />
+            <MenuCard 
+              delay="0.5s"
+              image="https://images.unsplash.com/photo-1621841957884-1210fe19b66d?auto=format&fit=crop&q=80&w=800"
+              category="Buffet Service"
+              title="Indian & Chinese Flavors"
+              description="A grand buffet spread of North Indian and Chinese delicacies."
+            />
           </div>
           <div style={{ textAlign: 'center', marginTop: '4rem' }}>
               <a href="/menu" className="btn btn-gold hover-target">See Full Menu</a>
@@ -317,6 +424,65 @@ export default function Home() {
         </div>
       </section>
 
+      <section id="work-showcase" style={{ padding: '4rem 0' }}>
+        <div className="container reveal">
+          <div className="section-header reveal">
+            <span className="section-tag">Gallery Highlights</span>
+            <h2>Our Work in Action.</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginTop: '3rem' }}>
+            {galleryImages.map((item, i) => (
+              <div key={i} style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px', aspectRatio: '1', cursor: 'pointer' }} className="hover-target">
+                <img 
+                  src={item.img} 
+                  alt={item.title}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    filter: 'grayscale(0%)',
+                    transition: 'filter 0.4s ease, transform 0.4s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    img.style.filter = 'grayscale(0%)';
+                    img.style.transform = 'scale(1.08)';
+                  }}
+                  onMouseLeave={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    img.style.filter = 'grayscale(0%)';
+                    img.style.transform = 'scale(1)';
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                  padding: '2rem 1.5rem 1.5rem',
+                  color: 'white',
+                  transform: 'translateY(20px)',
+                  transition: 'transform 0.4s ease',
+                  zIndex: 10
+                }}
+                onMouseEnter={(e) => {
+                  const div = e.currentTarget;
+                  div.style.transform = 'translateY(0)';
+                }}
+                onMouseLeave={(e) => {
+                  const div = e.currentTarget;
+                  div.style.transform = 'translateY(20px)';
+                }}
+                >
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>{item.title}</h3>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="gallery">
         <div className="gallery-container">
           {[
@@ -333,6 +499,205 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section style={{ padding: '5rem 0' }}>
+        <div className="container reveal">
+          <div className="section-header reveal">
+            <span className="section-tag">Packages</span>
+            <h2>Transparent Pricing.</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginTop: '3rem' }}>
+            {[
+              { name: 'Starter', price: '₹299', perHead: 'per head', items: ['Up to 50 guests', 'Vegetarian menu', 'Basic setup', 'Standard service'] },
+              { name: 'Classic', price: '₹599', perHead: 'per head', items: ['Up to 200 guests', 'Veg & Non-Veg', 'Premium setup', 'Professional staff', 'Beverages included'], featured: true },
+              { name: 'Premium', price: '₹899', perHead: 'per head', items: ['Unlimited guests', 'Customized menu', 'Luxury setup', 'Senior chef', 'Beverages & desserts', 'Decoration'] }
+            ].map((pkg, i) => (
+              <div key={i} style={{
+                padding: '2.5rem',
+                borderRadius: '4px',
+                backgroundColor: pkg.featured ? 'var(--color-gold)' : 'rgba(255,255,255,0.08)',
+                border: pkg.featured ? 'none' : '2px solid var(--color-gold)',
+                transform: pkg.featured ? 'scale(1.05)' : 'scale(1)',
+                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                cursor: 'pointer'
+              }} className="hover-target"
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transform = pkg.featured ? 'scale(1.08)' : 'scale(1.02)';
+                el.style.boxShadow = '0 10px 30px rgba(201, 168, 76, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transform = pkg.featured ? 'scale(1.05)' : 'scale(1)';
+                el.style.boxShadow = 'none';
+              }}>
+                <h3 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', color: pkg.featured ? '#0a0a0a' : 'var(--color-gold)', fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>{pkg.name}</h3>
+                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.25rem', color: pkg.featured ? '#0a0a0a' : 'var(--color-gold)', fontFamily: 'var(--font-display)' }}>{pkg.price}</div>
+                <p style={{ fontSize: '0.9rem', marginBottom: '2rem', color: pkg.featured ? 'rgba(10,10,10,0.8)' : 'var(--color-text-muted)' }}>{pkg.perHead}</p>
+                <ul style={{ listStyle: 'none', padding: 0, marginBottom: '2rem' }}>
+                  {pkg.items.map((item, j) => (
+                    <li key={j} style={{ padding: '0.5rem 0', borderBottom: '1px solid ' + (pkg.featured ? 'rgba(10,10,10,0.2)' : 'var(--color-gold)'), color: pkg.featured ? '#0a0a0a' : 'var(--color-text)', fontSize: '0.95rem' }}>✓ {item}</li>
+                  ))}
+                </ul>
+                <button className="btn btn-gold hover-target" style={{ width: '100%', padding: '0.8rem', background: pkg.featured ? 'white' : 'var(--color-gold)', color: pkg.featured ? 'var(--color-gold)' : 'white', border: 'none', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem' }}>Get Quote</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Video Section */}
+      <section style={{ padding: '5rem 0', backgroundColor: '#0a0a0a' }}>
+        <div className="container reveal">
+          <div className="section-header reveal">
+            <span className="section-tag">Behind the Scenes</span>
+            <h2>See Us in Action.</h2>
+          </div>
+          <div style={{ marginTop: '3rem', borderRadius: '4px', overflow: 'hidden', aspectRatio: '16/9', boxShadow: '0 10px 40px rgba(201, 168, 76, 0.1)' }}>
+            <iframe 
+              width="100%" 
+              height="100%" 
+              src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+              title="Delight Caterers - Behind the Scenes"
+              frameBorder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen
+              style={{ borderRadius: '4px' }}>
+            </iframe>
+          </div>
+          <p style={{ color: 'var(--color-text-muted)', marginTop: '2rem', textAlign: 'center', maxWidth: '600px', margin: '2rem auto 0', lineHeight: '1.6' }}>
+            Watch our team prepare exquisite dishes and create unforgettable catering experiences for your special events.
+          </p>
+        </div>
+      </section>
+
+      {/* Statistics Enhanced Interactive Section */}
+      <section style={{ padding: '5rem 0' }}>
+        <div className="container reveal">
+          <style>{`
+            @keyframes slideUp {
+              from {
+                opacity: 0;
+                transform: translateY(30px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            
+            @keyframes pulse-glow {
+              0%, 100% {
+                box-shadow: 0 0 0 0 rgba(201, 168, 76, 0.4);
+              }
+              50% {
+                box-shadow: 0 0 0 15px rgba(201, 168, 76, 0);
+              }
+            }
+            
+            @keyframes counter-bounce {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.1); }
+            }
+            
+            .stat-item {
+              padding: 2.5rem;
+              border-radius: '8px';
+              position: relative;
+              overflow: hidden;
+              cursor: pointer;
+              transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+              background: rgba(201, 168, 76, 0.05);
+            }
+            
+            .stat-item::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 3px;
+              background: linear-gradient(90deg, var(--color-gold), transparent);
+              transform: scaleX(0);
+              transform-origin: left;
+              transition: transform 0.6s ease;
+            }
+            
+            .stat-item:hover::before {
+              transform: scaleX(1);
+            }
+            
+            .stat-item:hover {
+              transform: translateY(-8px) scale(1.05);
+              background: rgba(201, 168, 76, 0.15);
+              box-shadow: 0 15px 40px rgba(201, 168, 76, 0.15);
+            }
+            
+            .stat-number {
+              font-size: 3.5rem;
+              font-weight: bold;
+              color: var(--color-gold);
+              margin-bottom: 0.5rem;
+              font-family: var(--font-display);
+              font-style: italic;
+              transition: all 0.3s ease;
+            }
+            
+            .stat-item:hover .stat-number {
+              font-size: 4rem;
+              text-shadow: 0 0 20px rgba(201, 168, 76, 0.5);
+            }
+            
+            .stat-label {
+              font-size: 1.1rem;
+              color: var(--color-text);
+              font-weight: 500;
+              transition: all 0.3s ease;
+              position: relative;
+            }
+            
+            .stat-item:hover .stat-label {
+              color: var(--color-gold);
+            }
+          `}</style>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem', textAlign: 'center' }}>
+            {[
+              { target: 18, suffix: '+', label: 'Years of Excellence' },
+              { target: 4.8, suffix: '★', label: 'Customer Rating' },
+              { target: 1000, suffix: '+', label: 'Guests Catered' },
+              { target: 500, suffix: '+', label: 'Events Completed' }
+            ].map((stat, i) => (
+              <StatCounter key={i} stat={stat} index={i} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section style={{ padding: '5rem 0', backgroundColor: '#0a0a0a' }}>
+        <div className="container reveal">
+          <div className="section-header reveal">
+            <span className="section-tag">Questions</span>
+            <h2>Frequently Asked.</h2>
+          </div>
+          <div style={{ maxWidth: '800px', margin: '3rem auto 0' }}>
+            {[
+              { q: 'What is the minimum number of guests?', a: 'We can accommodate events with a minimum of 20 guests. For smaller gatherings, please contact us for custom arrangements.' },
+              { q: 'Do you offer vegetarian and vegan options?', a: 'Yes! We offer 100% vegetarian, vegan, and non-vegetarian menus. Our chefs can customize based on dietary preferences.' },
+              { q: 'What areas do you serve?', a: 'We serve Nagpur and nearby areas within a 30km radius. Delivery outside this range is available upon request.' },
+              { q: 'How far in advance should we book?', a: 'We recommend booking at least 2-3 weeks before your event. For large events (200+ guests), please book 1 month in advance.' },
+              { q: 'Do you handle decoration and setup?', a: 'Yes! Our premium packages include full setup, arrangement, and professional service. We can customize based on your theme.' },
+              { q: 'What payment methods do you accept?', a: 'We accept cash, UPI, bank transfer, and card payments. A 30% advance is required to confirm your booking.' }
+            ].map((faq, i) => (
+              <details key={i} style={{ marginBottom: '1.5rem', border: '1px solid var(--color-gold)', borderRadius: '4px', padding: '1.5rem', cursor: 'pointer' }}>
+                <summary style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--color-gold)', cursor: 'pointer', fontFamily: 'var(--font-display)' }}>{faq.q}</summary>
+                <p style={{ marginTop: '1rem', color: 'var(--color-text-muted)', lineHeight: '1.6', fontSize: '0.95rem' }}>{faq.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="cta">
         <div className="cta-bg"></div>
         <div className="container cta-content reveal">
@@ -340,7 +705,7 @@ export default function Home() {
           <p style={{ color: 'var(--color-ivory)', marginBottom: '2rem', fontSize: '1.2rem' }}>
             Flat No 2, Shakun Apartment, Sheela Nagar Colony, Katol Road.
           </p>
-          <a href="tel:07947150211" className="btn btn-gold btn-glowing hover-target">Call 07947150211</a>
+          <a href="tel:9689330035" className="btn btn-gold btn-glowing hover-target">Call 9689330035</a>
         </div>
       </section>
 

@@ -18,29 +18,45 @@ model Customer {
 }
 
 model MenuItem {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
-  category    String // Appetizers, Mains, Sides, Desserts, Packages
+  category    String      // Appetizers, Mains, Sides, Desserts, Packages
   description String?
   price       Float
-  unit        String   @default("per plate")
-  available   Boolean  @default(true)
-  created_at  DateTime @default(now())
+  unit        String      @default("per plate")
+  available   Boolean     @default(true)
+  created_at  DateTime    @default(now())
+  orderItems  OrderItem[]
 }
 
 model Order {
-  id           String    @id @default(cuid())
+  id           String      @id @default(cuid())
   customer_id  String
-  customer     Customer  @relation(fields: [customer_id], references: [id])
+  customer     Customer    @relation(fields: [customer_id], references: [id])
   event_date   DateTime
   event_type   String
   guest_count  Int
-  status       String    @default("Pending") // Pending, Confirmed, In-Progress, Completed, Cancelled
+  status       String      @default("Pending") // Pending, Confirmed, In-Progress, Completed, Cancelled
   total_amount Float
   venue        String
   notes        String?
-  created_at   DateTime  @default(now())
+  created_at   DateTime    @default(now())
   invoice      Invoice?
+  orderItems   OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  order_id   String
+  order      Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  menu_id    String
+  menuItem   MenuItem @relation(fields: [menu_id], references: [id])
+  quantity   Int
+  unit_price Float
+  created_at DateTime @default(now())
+
+  @@index([order_id])
+  @@index([menu_id])
 }
 
 model Invoice {
@@ -67,6 +83,6 @@ model Contact {
   event_type  String
   event_date  DateTime
   guest_count Int
-  message     String
+  message     String?
   created_at  DateTime @default(now())
 }

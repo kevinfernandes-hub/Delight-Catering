@@ -15,6 +15,7 @@ export async function GET() {
     });
     return NextResponse.json(invoices);
   } catch (error) {
+    console.error('Invoices GET error:', error);
     return NextResponse.json({ error: 'Failed to fetch invoices' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { CreateMenuItemSchema } from '@/lib/validations';
 
 export async function GET() {
   try {
@@ -8,6 +9,7 @@ export async function GET() {
     });
     return NextResponse.json(items);
   } catch (error) {
+    console.error('Menu GET error:', error);
     return NextResponse.json({ error: 'Failed to fetch menu' }, { status: 500 });
   }
 }
@@ -15,17 +17,30 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
+    // Validate input
+    const validationResult = CreateMenuItemSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: validationResult.error.issues[0].message },
+        { status: 400 }
+      );
+    }
+
+    const data = validationResult.data;
     const item = await prisma.menuItem.create({
       data: {
-        name: body.name,
-        description: body.description,
-        price: body.price,
-        category: body.category,
-        available: body.available ?? true,
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        category: data.category,
+        unit: data.unit,
+        available: data.available,
       },
     });
     return NextResponse.json(item);
   } catch (error) {
+    console.error('Menu POST error:', error);
     return NextResponse.json({ error: 'Failed to create menu item' }, { status: 500 });
   }
 }

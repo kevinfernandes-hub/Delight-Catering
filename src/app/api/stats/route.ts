@@ -46,7 +46,7 @@ export async function GET() {
 
     return NextResponse.json(stats);
   } catch (error) {
-    console.error('Stats API Error:', error);
+    console.error('Stats API error:', error);
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
   }
 }

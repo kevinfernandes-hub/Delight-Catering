@@ -10,19 +10,19 @@ import {
   FileText,
   DollarSign,
   Trash2,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatInvoiceId } from '@/lib/utils';
 import { useToast } from '@/app/components/admin/Toast';
 import ConfirmDialog from '@/app/components/admin/ConfirmDialog';
+import { Invoice } from '@/lib/types';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+const BILL_TABS = ['All', 'Unpaid', 'Paid'];
 
-const BILL_TABS = ['All', 'Unpaid', 'Paid', 'Overdue'];
-
-const InvoiceModal = ({ invoice, onClose }: { invoice: any, onClose: () => void }) => {
-  const subtotal = invoice.total_amount / 1.08;
-  const tax = invoice.total_amount - subtotal;
+const InvoiceModal = ({ invoice, onClose }: { invoice: Invoice, onClose: () => void }) => {
+  const subtotal = invoice.subtotal || invoice.total / 1.08;
+  const tax = invoice.tax_amount || (invoice.total - subtotal);
 
   const handlePrint = () => {
     window.print();
@@ -47,7 +47,7 @@ const InvoiceModal = ({ invoice, onClose }: { invoice: any, onClose: () => void 
                 <div className="company-info">
                   <p>Flat No 2, Shakun Apartment, Sheela Nagar Colony</p>
                   <p>Katol Road, Nagpur, Maharashtra</p>
-                  <p>Phone: 9689330035 | Email: hello@delight.com</p>
+                  <p>Phone: 9689330035 | Email: merwynfernandes2015@gmail.com</p>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -61,17 +61,17 @@ const InvoiceModal = ({ invoice, onClose }: { invoice: any, onClose: () => void 
            <div className="invoice-addresses">
               <div className="billing-to">
                  <h3>BILL TO:</h3>
-                 <p className="customer-name">{invoice.order.customer.name}</p>
-                 <p>{invoice.order.customer.email}</p>
-                 <p>{invoice.order.customer.phone}</p>
-                 <p>{invoice.order.customer.address}</p>
+                 <p className="customer-name">{invoice.order?.customer?.name || 'N/A'}</p>
+                 <p>{invoice.order?.customer?.email || 'N/A'}</p>
+                 <p>{invoice.order?.customer?.phone || 'N/A'}</p>
+                 <p>{invoice.order?.customer?.address || 'N/A'}</p>
               </div>
               <div className="event-details">
                  <h3>EVENT DETAILS:</h3>
-                 <p><strong>Type:</strong> {invoice.order.event_type}</p>
-                 <p><strong>Date:</strong> {formatDate(invoice.order.event_date)}</p>
-                 <p><strong>Guests:</strong> {invoice.order.guest_count} persons</p>
-                 <p><strong>Venue:</strong> {invoice.order.venue || 'TBD'}</p>
+                 <p><strong>Type:</strong> {invoice.order?.event_type || 'N/A'}</p>
+                 <p><strong>Date:</strong> {invoice.order?.event_date ? formatDate(invoice.order.event_date) : 'N/A'}</p>
+                 <p><strong>Guests:</strong> {invoice.order?.guest_count || 'N/A'} persons</p>
+                 <p><strong>Venue:</strong> {invoice.order?.venue || 'TBD'}</p>
               </div>
            </div>
 
@@ -87,8 +87,8 @@ const InvoiceModal = ({ invoice, onClose }: { invoice: any, onClose: () => void 
               <tbody>
                  <tr>
                     <td>
-                       <strong>Catering Service - {invoice.order.event_type}</strong><br />
-                       <span style={{ fontSize: '0.8rem', color: '#666' }}>Complete buffet setup, service staff, and menu execution for {invoice.order.guest_count} guests.</span>
+                       <strong>Catering Service - {invoice.order?.event_type || 'N/A'}</strong><br />
+                       <span style={{ fontSize: '0.8rem', color: '#666' }}>Complete buffet setup, service staff, and menu execution for {invoice.order?.guest_count || 0} guests.</span>
                     </td>
                     <td style={{ textAlign: 'center' }}>1</td>
                     <td style={{ textAlign: 'right' }}>{formatCurrency(subtotal)}</td>
@@ -107,7 +107,7 @@ const InvoiceModal = ({ invoice, onClose }: { invoice: any, onClose: () => void 
               <div className="amount-breakdown">
                  <div className="total-row"><span>Subtotal:</span> <span>{formatCurrency(subtotal)}</span></div>
                  <div className="total-row"><span>Tax (8%):</span> <span>{formatCurrency(tax)}</span></div>
-                 <div className="total-row grand-total"><span>Total:</span> <span>{formatCurrency(invoice.total_amount)}</span></div>
+                 <div className="total-row grand-total"><span>Total:</span> <span>{formatCurrency(invoice.total)}</span></div>
                  
                  <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
                     <span className={`print-badge badge-${invoice.status.toLowerCase()}`}>
@@ -159,29 +159,39 @@ const InvoiceModal = ({ invoice, onClose }: { invoice: any, onClose: () => void 
 };
 
 export default function AdminBills() {
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('All');
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const fetchInvoices = useCallback(() => {
     setLoading(true);
     fetch('/api/invoices')
-      .then(res => res.json())
-      .then(data => {
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then((data: Invoice[]) => {
         setInvoices(data || []);
         setLoading(false);
+      })
+      .catch(err => {
+        console.error('Invoice list error:', err);
+        showToast('Failed to load invoices', 'error');
+        setLoading(false);
       });
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
 
-  const handleUpdateStatus = async (id: number, newStatus: string) => {
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
+      setActionLoading(id);
       const res = await fetch(`/api/invoices/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -190,30 +200,43 @@ export default function AdminBills() {
       if (res.ok) {
         showToast(`Invoice marked as ${newStatus}`, 'success');
         fetchInvoices();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to update invoice', 'error');
       }
     } catch (error) {
+      console.error('Update status error:', error);
       showToast('Failed to update invoice', 'error');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     try {
+      setActionLoading(deleteConfirm);
       const res = await fetch(`/api/invoices/${deleteConfirm}`, { method: 'DELETE' });
       if (res.ok) {
         showToast('Invoice deleted', 'success');
         fetchInvoices();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to delete invoice', 'error');
       }
     } catch (error) {
+      console.error('Delete error:', error);
       showToast('Failed to delete invoice', 'error');
+    } finally {
+      setActionLoading(null);
+      setDeleteConfirm(null);
     }
-    setDeleteConfirm(null);
   };
 
   const stats = {
-    paid: invoices.filter(i => i.status === 'Paid').reduce((acc, i) => acc + i.total_amount, 0),
-    outstanding: invoices.filter(i => i.status === 'Unpaid').reduce((acc, i) => acc + i.total_amount, 0),
-    overdue: invoices.filter(i => i.status === 'Overdue').length,
+    paid: invoices.filter(i => i.status === 'Paid').reduce((acc, i) => acc + i.total, 0),
+    outstanding: invoices.filter(i => i.status === 'Unpaid').reduce((acc, i) => acc + i.total, 0),
+    overdue: invoices.filter(i => i.status === 'Unpaid' && new Date(i.due_date) < new Date()).length,
     total: invoices.length
   };
 
@@ -288,13 +311,13 @@ export default function AdminBills() {
                 <tr key={inv.id} className="table-row">
                   <td style={{ padding: '1.25rem', fontWeight: 'bold' }}>{formatInvoiceId(inv.id)}</td>
                   <td style={{ padding: '1.25rem' }}>
-                    <div style={{ fontWeight: '500' }}>{inv.order.customer.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{inv.order.event_type}</div>
+                    <div style={{ fontWeight: '500' }}>{inv.order?.customer?.name || 'N/A'}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{inv.order?.event_type || 'N/A'}</div>
                   </td>
-                  <td style={{ padding: '1.25rem', color: inv.status === 'Overdue' ? '#ef4444' : '#A3A3A3' }}>
+                  <td style={{ padding: '1.25rem', color: (inv.status === 'Unpaid' && new Date(inv.due_date) < new Date()) ? '#ef4444' : '#A3A3A3' }}>
                     {formatDate(new Date(new Date(inv.created_at).getTime() + 7 * 24 * 60 * 60 * 1000))}
                   </td>
-                  <td style={{ padding: '1.25rem', fontWeight: 'bold' }}>{formatCurrency(inv.total_amount)}</td>
+                  <td style={{ padding: '1.25rem', fontWeight: 'bold' }}>{formatCurrency(inv.total)}</td>
                   <td style={{ padding: '1.25rem' }}>
                     <select 
                       value={inv.status}

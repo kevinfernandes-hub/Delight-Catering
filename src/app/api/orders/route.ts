@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { CreateOrderSchema } from '@/lib/validations';
 
 export async function GET() {
   try {
@@ -11,6 +12,7 @@ export async function GET() {
     });
     return NextResponse.json(orders);
   } catch (error) {
+    console.error('Orders GET error:', error);
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
   }
 }
@@ -19,17 +21,28 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // Create or find customer (simplified for beta)
+    // Validate input
+    const validationResult = CreateOrderSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: validationResult.error.issues[0].message },
+        { status: 400 }
+      );
+    }
+
+    const data = validationResult.data;
+    
+    // Create or find customer
     let customer;
-    if (body.customer_id) {
-       customer = { id: body.customer_id };
+    if (data.customer_id) {
+       customer = { id: data.customer_id };
     } else {
        customer = await prisma.customer.create({
          data: {
-           name: body.customerName,
-           email: body.email,
-           phone: body.phone,
-           address: body.address || 'N/A'
+           name: data.customerName,
+           email: data.email,
+           phone: data.phone,
+           address: data.address || 'N/A'
          }
        });
     }
@@ -37,12 +50,13 @@ export async function POST(request: Request) {
     const order = await prisma.order.create({
       data: {
         customer_id: customer.id,
-        event_type: body.event_type,
-        event_date: new Date(body.event_date),
-        guest_count: parseInt(body.guest_count),
-        total_amount: parseFloat(body.total_amount),
-        venue: body.venue,
+        event_type: data.event_type,
+        event_date: new Date(data.event_date),
+        guest_count: data.guest_count,
+        total_amount: data.total_amount,
+        venue: data.venue || '',
         status: 'Pending',
+        notes: data.notes
       },
     });
 
@@ -64,7 +78,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error(error);
+    console.error('Orders POST error:', error);
     return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
   }
 }

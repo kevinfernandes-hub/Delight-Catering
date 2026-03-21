@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { LoginSchema } from '@/lib/validations';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -24,19 +25,43 @@ export default function AdminLogin() {
     setError('');
     setLoading(true);
 
-    // Behavioral Spec: admin@delight.com / admin123
-    setTimeout(() => {
-      if (email === 'admin@delight.com' && password === 'admin123') {
-        localStorage.setItem('admin_session', JSON.stringify({
-          email,
-          loginTime: new Date().toISOString()
-        }));
-        router.push('/admin/dashboard');
-      } else {
-        setError('Invalid credentials. Please try again.');
+    try {
+      // Validate input format
+      const validationResult = LoginSchema.safeParse({ email, password });
+      if (!validationResult.success) {
+        setError(validationResult.error.issues[0].message);
         setLoading(false);
+        return;
       }
-    }, 800);
+
+      // Call backend validation API
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // Store session token
+      localStorage.setItem('admin_session', JSON.stringify({
+        email,
+        token: data.token,
+        loginTime: new Date().toISOString()
+      }));
+
+      router.push('/admin/dashboard');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('An error occurred. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (

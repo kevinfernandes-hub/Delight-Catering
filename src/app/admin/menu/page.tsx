@@ -11,18 +11,19 @@ import {
   Info,
   DollarSign,
   Tag,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/app/components/admin/Toast';
 import ConfirmDialog from '@/app/components/admin/ConfirmDialog';
+import { MenuItem } from '@/lib/types';
+import { CreateMenuItemInput } from '@/lib/validations';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+const CATEGORIES = ['All', 'Appetizers', 'Mains', 'Sides', 'Desserts', 'Packages'];
 
-const CATEGORIES = ['All', 'Main Course', 'Starter', 'Dessert', 'Beverage', 'Chinese', 'Indian'];
-
-const MenuItemModal = ({ item, onClose, onSave }: { item: any, onClose: () => void, onSave: (data: any) => void }) => {
-  const [formData, setFormData] = useState(item || { name: '', description: '', price: 0, category: 'Main Course', available: true });
+const MenuItemModal = ({ item, onClose, onSave }: { item?: MenuItem, onClose: () => void, onSave: (data: CreateMenuItemInput) => void }) => {
+  const [formData, setFormData] = useState<CreateMenuItemInput>(item ? { name: item.name, description: item.description, price: item.price, category: item.category as any, available: item.available, unit: item.unit } : { name: '', description: '', price: 0, category: 'Appetizers' as any, available: true, unit: 'per plate' });
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -69,7 +70,7 @@ const MenuItemModal = ({ item, onClose, onSave }: { item: any, onClose: () => vo
               <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Category</label>
               <select 
                 value={formData.category}
-                onChange={e => setFormData({ ...formData, category: e.target.value })}
+                onChange={e => setFormData({ ...formData, category: e.target.value as any })}
                 style={{ width: '100%', padding: '0.75rem', backgroundColor: '#050505', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff' }}
               >
                 {CATEGORIES.slice(1).map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -88,34 +89,44 @@ const MenuItemModal = ({ item, onClose, onSave }: { item: any, onClose: () => vo
 };
 
 export default function AdminMenu() {
-  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | undefined>(undefined);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const fetchMenu = useCallback(() => {
     setLoading(true);
     fetch('/api/menu')
-      .then(res => res.json())
-      .then(data => {
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then((data: MenuItem[]) => {
         setMenuItems(data || []);
         setLoading(false);
+      })
+      .catch(err => {
+        console.error('Menu fetch error:', err);
+        showToast('Failed to load menu', 'error');
+        setLoading(false);
       });
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchMenu();
   }, [fetchMenu]);
 
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: CreateMenuItemInput) => {
     const url = selectedItem ? `/api/menu/${selectedItem.id}` : '/api/menu';
     const method = selectedItem ? 'PUT' : 'POST';
 
     try {
+      setActionLoading(selectedItem?.id || 'new');
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -124,25 +135,39 @@ export default function AdminMenu() {
       if (res.ok) {
         showToast(`Successfully ${selectedItem ? 'updated' : 'added'} ${data.name}`, 'success');
         setIsModalOpen(false);
+        setSelectedItem(undefined);
         fetchMenu();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to save menu item', 'error');
       }
     } catch (error) {
-      showToast('failed to save menu item', 'error');
+      console.error('Save menu item error:', error);
+      showToast('Failed to save menu item', 'error');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     try {
+      setActionLoading(deleteConfirm);
       const res = await fetch(`/api/menu/${deleteConfirm}`, { method: 'DELETE' });
       if (res.ok) {
         showToast('Item removed from menu', 'success');
         fetchMenu();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to delete item', 'error');
       }
     } catch (error) {
+      console.error('Delete menu item error:', error);
       showToast('Failed to delete item', 'error');
+    } finally {
+      setActionLoading(null);
+      setDeleteConfirm(null);
     }
-    setDeleteConfirm(null);
   };
 
   const filteredItems = menuItems.filter(item => {
@@ -158,8 +183,8 @@ export default function AdminMenu() {
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Menu Management</h1>
           <p style={{ color: '#A3A3A3' }}>Organize your culinary offerings and pricing.</p>
         </div>
-        <button 
-          onClick={() => { setSelectedItem(null); setIsModalOpen(true); }}
+        <button
+          onClick={() => { setSelectedItem(undefined); setIsModalOpen(true); }}
           className="btn-gold" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
           <Plus size={18} /> Add Dish

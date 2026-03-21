@@ -11,6 +11,13 @@ export const formatCurrency = (amount: number): string => {
 };
 
 /**
+ * Combines class names conditionally
+ */
+export const cn = (...classes: (string | undefined | null | false)[]): string => {
+  return classes.filter(Boolean).join(' ');
+};
+
+/**
  * Formats a date string or Date object to a readable format (e.g., Mar 15, 2026)
  */
 export const formatDate = (date: string | Date | null): string => {

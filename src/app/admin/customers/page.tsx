@@ -11,13 +11,13 @@ import {
   ShoppingBag,
   History,
   TrendingUp,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/app/components/admin/Toast';
 import ConfirmDialog from '@/app/components/admin/ConfirmDialog';
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Customer, Order } from '@/lib/types';
 
 const getAvatarColor = (name: string) => {
   const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#C9A84C'];
@@ -25,8 +25,8 @@ const getAvatarColor = (name: string) => {
   return colors[index];
 };
 
-const CustomerModal = ({ customer, onClose, showToast }: { customer: any, onClose: () => void, showToast: any }) => {
-  const totalSpent = customer.orders?.reduce((acc: number, o: any) => acc + o.total_amount, 0) || 0;
+const CustomerModal = ({ customer, onClose }: { customer: Customer & { orders?: Order[] }, onClose: () => void }) => {
+  const totalSpent = customer.orders?.reduce((acc: number, o: Order) => acc + o.total_amount, 0) || 0;
   
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -94,8 +94,8 @@ const CustomerModal = ({ customer, onClose, showToast }: { customer: any, onClos
               </table>
            </div>
 
-           <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-              <button className="btn-secondary" onClick={() => showToast('Editing is not yet implemented for this beta', 'info')}>Edit Profile</button>
+           <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              {/* Edit profile functionality coming soon */}
            </div>
         </div>
       </div>
@@ -112,22 +112,31 @@ const CustomerModal = ({ customer, onClose, showToast }: { customer: any, onClos
 };
 
 export default function AdminCustomers() {
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<(Customer & { orders?: Order[] })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<(Customer & { orders?: Order[] }) | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const fetchCustomers = useCallback(() => {
     setLoading(true);
     fetch('/api/customers')
-      .then(res => res.json())
-      .then(data => {
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then((data: (Customer & { orders?: Order[] })[]) => {
         setCustomers(data || []);
         setLoading(false);
+      })
+      .catch(err => {
+        console.error('Customer list error:', err);
+        showToast('Failed to load customers', 'error');
+        setLoading(false);
       });
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchCustomers();
@@ -136,15 +145,22 @@ export default function AdminCustomers() {
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     try {
+      setActionLoading(deleteConfirm);
       const res = await fetch(`/api/customers/${deleteConfirm}`, { method: 'DELETE' });
       if (res.ok) {
         showToast('Customer and all their history deleted', 'success');
         fetchCustomers();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to delete customer', 'error');
       }
     } catch (error) {
+      console.error('Delete customer error:', error);
       showToast('Failed to delete customer', 'error');
+    } finally {
+      setActionLoading(null);
+      setDeleteConfirm(null);
     }
-    setDeleteConfirm(null);
   };
 
   const filteredCustomers = customers.filter(c => 
@@ -226,7 +242,7 @@ export default function AdminCustomers() {
         })}
       </div>
 
-      {selectedCustomer && <CustomerModal customer={selectedCustomer} showToast={showToast} onClose={() => setSelectedCustomer(null)} />}
+      {selectedCustomer && <CustomerModal customer={selectedCustomer} onClose={() => setSelectedCustomer(null)} />}
       
       <ConfirmDialog 
         isOpen={deleteConfirm !== null}
