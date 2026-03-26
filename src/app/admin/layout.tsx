@@ -63,6 +63,7 @@ export default function AdminLayout({
   const menuItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Orders', path: '/admin/orders', icon: <ShoppingCart size={20} /> },
+    { name: 'Menu Orders', path: '/admin/menu-orders', icon: <ShoppingCart size={20} /> },
     { name: 'Bills', path: '/admin/bills', icon: <Receipt size={20} /> },
     { name: 'Customers', path: '/admin/customers', icon: <Users size={20} /> },
     { name: 'Menu', path: '/admin/menu', icon: <MenuIcon size={20} /> },

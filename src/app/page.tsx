@@ -662,10 +662,10 @@ export default function Home() {
           `}</style>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem', textAlign: 'center' }}>
             {[
-              { target: 18, suffix: '+', label: 'Years of Excellence' },
-              { target: 4.8, suffix: '★', label: 'Customer Rating' },
-              { target: 1000, suffix: '+', label: 'Guests Catered' },
-              { target: 500, suffix: '+', label: 'Events Completed' }
+              { target: 18, suffix: '+', label: 'Years of Excellence', icon: '👨‍🍳' },
+              { target: 4.8, suffix: '★', label: 'Customer Rating', icon: '⭐' },
+              { target: 1000, suffix: '+', label: 'Guests Catered', icon: '🍽️' },
+              { target: 500, suffix: '+', label: 'Events Completed', icon: '🎉' }
             ].map((stat, i) => (
               <StatCounter key={i} stat={stat} index={i} />
             ))}

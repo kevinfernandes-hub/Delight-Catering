@@ -11,7 +11,9 @@ import {
   DollarSign,
   Trash2,
   X,
-  Loader2
+  Loader2,
+  Download,
+  Mail
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatInvoiceId } from '@/lib/utils';
 import { useToast } from '@/app/components/admin/Toast';
@@ -212,6 +214,61 @@ export default function AdminBills() {
     }
   };
 
+  const handleDownloadPDF = async (invoiceId: string, invoiceNumber: string) => {
+    try {
+      setActionLoading(invoiceId);
+      const res = await fetch(`/api/invoices/${invoiceId}/pdf`, { credentials: 'include' });
+      
+      if (!res.ok) {
+        showToast('Failed to download PDF', 'error');
+        return;
+      }
+
+      // Create blob and download
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showToast('Invoice downloaded successfully', 'success');
+    } catch (error) {
+      console.error('PDF download error:', error);
+      showToast('Failed to download PDF', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSendInvoiceEmail = async (invoiceId: string) => {
+    try {
+      setActionLoading(invoiceId);
+      const res = await fetch('/api/emails/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ type: 'invoice', invoiceId })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast('Invoice email sent successfully', 'success');
+      } else {
+        showToast(data.error || 'Failed to send email', 'error');
+      }
+    } catch (error) {
+      console.error('Send email error:', error);
+      showToast('Failed to send email', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     try {
@@ -329,8 +386,38 @@ export default function AdminBills() {
                   </td>
                   <td style={{ padding: '1.25rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                       <button onClick={() => setSelectedInvoice(inv)} className="action-btn"><Eye size={16} /></button>
-                       <button onClick={() => setDeleteConfirm(inv.id)} className="action-btn delete"><Trash2 size={16} /></button>
+                       <button 
+                         onClick={() => setSelectedInvoice(inv)} 
+                         className="action-btn"
+                         title="View"
+                         disabled={actionLoading === inv.id}
+                       >
+                         <Eye size={16} />
+                       </button>
+                       <button 
+                         onClick={() => handleDownloadPDF(inv.id, inv.invoice_number)} 
+                         className="action-btn"
+                         title="Download PDF"
+                         disabled={actionLoading === inv.id}
+                       >
+                         {actionLoading === inv.id ? <Loader2 size={16} className="spin" /> : <Download size={16} />}
+                       </button>
+                       <button 
+                         onClick={() => handleSendInvoiceEmail(inv.id)} 
+                         className="action-btn"
+                         title="Send Email"
+                         disabled={actionLoading === inv.id}
+                       >
+                         {actionLoading === inv.id ? <Loader2 size={16} className="spin" /> : <Mail size={16} />}
+                       </button>
+                       <button 
+                         onClick={() => setDeleteConfirm(inv.id)} 
+                         className="action-btn delete"
+                         title="Delete"
+                         disabled={actionLoading === inv.id}
+                       >
+                         <Trash2 size={16} />
+                       </button>
                     </div>
                   </td>
                 </tr>
@@ -382,6 +469,9 @@ export default function AdminBills() {
 
         .animate-fade-in { animation: fade-in 0.4s ease-out; }
         @keyframes fade-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
       `}</style>
     </div>
   );

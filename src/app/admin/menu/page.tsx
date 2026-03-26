@@ -21,66 +21,213 @@ import { MenuItem } from '@/lib/types';
 import { CreateMenuItemInput } from '@/lib/validations';
 
 const CATEGORIES = ['All', 'Appetizers', 'Mains', 'Sides', 'Desserts', 'Packages'];
+const UNITS = ['per plate', 'per piece', 'per lb', 'per serving'];
 
-const MenuItemModal = ({ item, onClose, onSave }: { item?: MenuItem, onClose: () => void, onSave: (data: CreateMenuItemInput) => void }) => {
-  const [formData, setFormData] = useState<CreateMenuItemInput>(item ? { name: item.name, description: item.description, price: item.price, category: item.category as any, available: item.available, unit: item.unit } : { name: '', description: '', price: 0, category: 'Appetizers' as any, available: true, unit: 'per plate' });
+const MenuItemForm = ({ 
+  item, 
+  onClose, 
+  onSave,
+  showToast 
+}: { 
+  item?: MenuItem, 
+  onClose: () => void, 
+  onSave: (data: CreateMenuItemInput) => void,
+  showToast: (msg: string, type: 'success' | 'error' | 'info') => void
+}) => {
+  const [formData, setFormData] = useState<CreateMenuItemInput>(
+    item ? { 
+      name: item.name, 
+      description: item.description || '', 
+      price: item.price, 
+      category: item.category as any, 
+      available: item.available, 
+      unit: item.unit || 'per plate' 
+    } : { 
+      name: '', 
+      description: '', 
+      price: 0, 
+      category: 'Appetizers' as any, 
+      available: true, 
+      unit: 'per plate' 
+    }
+  );
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = 'Dish name is required';
+    else if (formData.name.trim().length < 2) newErrors.name = 'Name must be at least 2 characters';
+    if (formData.price <= 0) newErrors.price = 'Price must be greater than 0';
+    if (!formData.category) newErrors.category = 'Category is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setLoading(true);
+    setTimeout(() => {
+      onSave(formData);
+      setLoading(false);
+    }, 300);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', width: '95%' }}>
         <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>{item ? 'Edit Menu Item' : 'Add New Item'}</h2>
+          <h2 style={{ margin: 0 }}>{item ? 'Edit Menu Item' : 'Add New Dish'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}><X size={24} /></button>
         </div>
 
-        <form style={{ padding: '1.5rem' }} onSubmit={(e) => { e.preventDefault(); onSave(formData); }}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Dish Name</label>
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Dish Name *</label>
             <input 
               type="text" 
-              required
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
-              style={{ width: '100%', padding: '0.75rem', backgroundColor: '#050505', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff' }} 
+              placeholder="e.g., Butter Chicken"
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                backgroundColor: '#050505', 
+                border: `1px solid ${errors.name ? '#ef4444' : '#333'}`, 
+                borderRadius: '0.5rem', 
+                color: '#fff' 
+              }} 
             />
+            {errors.name && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.name}</p>}
           </div>
 
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Description</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <div>
+              <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Price (₹) *</label>
+              <input 
+                type="number" 
+                step="0.01"
+                min="0"
+                value={formData.price}
+                onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+                style={{ 
+                  width: '100%', 
+                  padding: '0.75rem', 
+                  backgroundColor: '#050505', 
+                  border: `1px solid ${errors.price ? '#ef4444' : '#333'}`, 
+                  borderRadius: '0.5rem', 
+                  color: '#fff' 
+                }} 
+              />
+              {errors.price && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.price}</p>}
+            </div>
+
+            <div>
+              <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Category *</label>
+              <select 
+                value={formData.category}
+                onChange={e => setFormData({ ...formData, category: e.target.value as any })}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.75rem', 
+                  backgroundColor: '#050505', 
+                  border: `1px solid ${errors.category ? '#ef4444' : '#333'}`, 
+                  borderRadius: '0.5rem', 
+                  color: '#fff' 
+                }}
+              >
+                {CATEGORIES.slice(1).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+              {errors.category && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.category}</p>}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Unit</label>
+            <select 
+              value={formData.unit}
+              onChange={e => setFormData({ ...formData, unit: e.target.value })}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                backgroundColor: '#050505', 
+                border: '1px solid #333', 
+                borderRadius: '0.5rem', 
+                color: '#fff' 
+              }}
+            >
+              {UNITS.map(unit => <option key={unit} value={unit}>{unit}</option>)}
+            </select>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Description</label>
             <textarea 
               rows={3}
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
-              style={{ width: '100%', padding: '0.75rem', backgroundColor: '#050505', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', resize: 'none' }} 
+              placeholder="Ingredients, preparation method, dietary info..."
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                backgroundColor: '#050505', 
+                border: '1px solid #333', 
+                borderRadius: '0.5rem', 
+                color: '#fff', 
+                resize: 'none',
+                fontFamily: 'inherit'
+              }} 
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div>
-              <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Price (INR)</label>
-              <input 
-                type="number" 
-                required
-                value={formData.price}
-                onChange={e => setFormData({ ...formData, price: Number(e.target.value) })}
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#050505', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff' }} 
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Category</label>
-              <select 
-                value={formData.category}
-                onChange={e => setFormData({ ...formData, category: e.target.value as any })}
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#050505', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff' }}
-              >
-                {CATEGORIES.slice(1).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
-            </div>
+          <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <input
+              type="checkbox"
+              checked={formData.available}
+              onChange={(e) => setFormData({...formData, available: e.target.checked})}
+              id="available"
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <label htmlFor="available" style={{ fontWeight: '600', cursor: 'pointer', color: '#fff' }}>Available for orders</label>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-            <button type="button" onClick={onClose} style={{ padding: '0.6rem 1.2rem', backgroundColor: 'transparent', border: '1px solid #333', color: '#fff', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" className="btn-gold">Save Dish</button>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#1a1a1a',
+                border: '1px solid #333',
+                color: '#fff',
+                borderRadius: '0.5rem',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#C9A84C',
+                color: '#000',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              {loading && <Loader2 size={16} />}
+              {loading ? 'Saving...' : item ? 'Update Dish' : 'Add Dish'}
+            </button>
           </div>
         </form>
       </div>
@@ -133,7 +280,7 @@ export default function AdminMenu() {
         body: JSON.stringify(data)
       });
       if (res.ok) {
-        showToast(`Successfully ${selectedItem ? 'updated' : 'added'} ${data.name}`, 'success');
+        showToast(`✓ ${data.name} ${selectedItem ? 'updated' : 'added to menu'}`, 'success');
         setIsModalOpen(false);
         setSelectedItem(undefined);
         fetchMenu();
@@ -263,7 +410,7 @@ export default function AdminMenu() {
         ))}
       </div>
 
-      {isModalOpen && <MenuItemModal item={selectedItem} onClose={() => setIsModalOpen(false)} onSave={handleSave} />}
+      {isModalOpen && <MenuItemForm item={selectedItem} onClose={() => setIsModalOpen(false)} onSave={handleSave} showToast={showToast} />}
       
       <ConfirmDialog 
         isOpen={deleteConfirm !== null}

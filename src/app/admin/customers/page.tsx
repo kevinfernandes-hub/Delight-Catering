@@ -25,6 +25,223 @@ const getAvatarColor = (name: string) => {
   return colors[index];
 };
 
+const CustomerForm = ({ 
+  customer, 
+  onClose, 
+  onSave,
+  showToast 
+}: { 
+  customer?: Customer, 
+  onClose: () => void, 
+  onSave: () => void,
+  showToast: (msg: string, type: 'success' | 'error' | 'info') => void
+}) => {
+  const [formData, setFormData] = useState({
+    name: customer?.name || '',
+    email: customer?.email || '',
+    phone: customer?.phone || '',
+    address: customer?.address || '',
+    notes: customer?.notes || ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
+    if (!formData.address.trim()) newErrors.address = 'Address is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const method = customer?.id ? 'PUT' : 'POST';
+      const url = customer?.id ? `/api/customers/${customer.id}` : '/api/customers';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save customer');
+      }
+
+      showToast(customer?.id ? 'Customer updated successfully' : 'Customer added successfully', 'success');
+      onSave();
+      onClose();
+    } catch (err: any) {
+      setErrors({ submit: err.message });
+      showToast(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', width: '95%' }}>
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0 }}>{customer?.id ? 'Edit Customer' : 'Add New Customer'}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}><X size={24} /></button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <div>
+              <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Full Name *</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: '#050505',
+                  border: `1px solid ${errors.name ? '#ef4444' : '#333'}`,
+                  borderRadius: '0.5rem',
+                  color: '#fff'
+                }}
+                placeholder="John Doe"
+              />
+              {errors.name && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.name}</p>}
+            </div>
+
+            <div>
+              <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Email *</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: '#050505',
+                  border: `1px solid ${errors.email ? '#ef4444' : '#333'}`,
+                  borderRadius: '0.5rem',
+                  color: '#fff'
+                }}
+                placeholder="john@example.com"
+              />
+              {errors.email && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.email}</p>}
+            </div>
+
+            <div>
+              <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Phone *</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: '#050505',
+                  border: `1px solid ${errors.phone ? '#ef4444' : '#333'}`,
+                  borderRadius: '0.5rem',
+                  color: '#fff'
+                }}
+                placeholder="+91 98765 43210"
+              />
+              {errors.phone && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.phone}</p>}
+            </div>
+
+            <div>
+              <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>City/Address *</label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: '#050505',
+                  border: `1px solid ${errors.address ? '#ef4444' : '#333'}`,
+                  borderRadius: '0.5rem',
+                  color: '#fff'
+                }}
+                placeholder="New York, USA"
+              />
+              {errors.address && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.address}</p>}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              rows={3}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                backgroundColor: '#050505',
+                border: '1px solid #333',
+                borderRadius: '0.5rem',
+                color: '#fff',
+                fontFamily: 'inherit'
+              }}
+              placeholder="Add any notes about this customer..."
+            />
+          </div>
+
+          {errors.submit && (
+            <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.75rem 1rem', borderRadius: '0.5rem', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+              {errors.submit}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#1a1a1a',
+                border: '1px solid #333',
+                color: '#fff',
+                borderRadius: '0.5rem',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#C9A84C',
+                color: '#000',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              {loading && <Loader2 size={16} />}
+              {loading ? 'Saving...' : customer?.id ? 'Update Customer' : 'Add Customer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const CustomerModal = ({ customer, onClose }: { customer: Customer & { orders?: Order[] }, onClose: () => void }) => {
   const totalSpent = customer.orders?.reduce((acc: number, o: Order) => acc + o.total_amount, 0) || 0;
   
@@ -117,6 +334,8 @@ export default function AdminCustomers() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<(Customer & { orders?: Order[] }) | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const { showToast } = useToast();
 
@@ -175,7 +394,14 @@ export default function AdminCustomers() {
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Customer Database</h1>
           <p style={{ color: '#A3A3A3' }}>Your client relationships and their full historical data.</p>
         </div>
-        <button className="btn-gold" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <button 
+          onClick={() => {
+            setEditingCustomer(null);
+            setShowForm(true);
+          }}
+          className="btn-gold" 
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
           <Plus size={18} /> Add New Customer
         </button>
       </div>
@@ -213,8 +439,25 @@ export default function AdminCustomers() {
                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>{customer.email}</p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                     <button className="icon-btn" onClick={e => { e.stopPropagation(); showToast('Edit coming soon', 'info'); }}><Edit2 size={14} /></button>
-                     <button className="icon-btn delete" onClick={e => { e.stopPropagation(); setDeleteConfirm(customer.id); }}><Trash2 size={14} /></button>
+                     <button 
+                       className="icon-btn" 
+                       onClick={e => { 
+                         e.stopPropagation(); 
+                         setEditingCustomer(customer);
+                         setShowForm(true);
+                       }}
+                     >
+                       <Edit2 size={14} />
+                     </button>
+                     <button 
+                       className="icon-btn delete" 
+                       onClick={e => { 
+                         e.stopPropagation(); 
+                         setDeleteConfirm(customer.id); 
+                       }}
+                     >
+                       <Trash2 size={14} />
+                     </button>
                   </div>
                </div>
 
@@ -243,6 +486,18 @@ export default function AdminCustomers() {
       </div>
 
       {selectedCustomer && <CustomerModal customer={selectedCustomer} onClose={() => setSelectedCustomer(null)} />}
+      
+      {showForm && (
+        <CustomerForm 
+          customer={editingCustomer || undefined}
+          onClose={() => {
+            setShowForm(false);
+            setEditingCustomer(null);
+          }}
+          onSave={fetchCustomers}
+          showToast={showToast}
+        />
+      )}
       
       <ConfirmDialog 
         isOpen={deleteConfirm !== null}

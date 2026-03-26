@@ -13,11 +13,19 @@ export default function AdminLogin() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect if already logged in
-    const session = localStorage.getItem('admin_session');
-    if (session) {
-      router.push('/admin/dashboard');
-    }
+    // Check if already logged in by attempting to access a protected endpoint
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/orders', { credentials: 'include' });
+        if (res.ok) {
+          // Already authenticated, redirect to dashboard
+          router.push('/admin/dashboard');
+        }
+      } catch (err) {
+        // Not authenticated, stay on login page
+      }
+    };
+    checkAuth();
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -34,10 +42,11 @@ export default function AdminLogin() {
         return;
       }
 
-      // Call backend validation API
+      // Call backend authentication API
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Important: send/receive cookies
         body: JSON.stringify({ email, password }),
       });
 
@@ -49,13 +58,8 @@ export default function AdminLogin() {
         return;
       }
 
-      // Store session token
-      localStorage.setItem('admin_session', JSON.stringify({
-        email,
-        token: data.token,
-        loginTime: new Date().toISOString()
-      }));
-
+      // Token already set in httpOnly cookie by server
+      // Redirect to dashboard
       router.push('/admin/dashboard');
     } catch (err) {
       console.error('Login error:', err);

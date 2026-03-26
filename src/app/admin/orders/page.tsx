@@ -16,7 +16,8 @@ import {
   Calendar,
   Users as UsersIcon,
   MapPin,
-  DollarSign
+  DollarSign,
+  Loader2
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatOrderId } from '@/lib/utils';
 import { useToast } from '@/app/components/admin/Toast';
@@ -24,83 +25,426 @@ import ConfirmDialog from '@/app/components/admin/ConfirmDialog';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const ORDER_TABS = ['All', 'Pending', 'Confirmed', 'Completed', 'Cancelled'];
+const ORDER_TABS = ['All', 'Pending', 'Confirmed', 'In-Progress', 'Completed', 'Cancelled'];
+const EVENT_TYPES = ['Wedding', 'Corporate', 'Birthday', 'Anniversary', 'Engagement', 'Reception', 'Other'];
 
-const NewOrderModal = ({ onClose, onSave }: { onClose: () => void, onSave: (data: any) => void }) => {
+interface OrderFormItem {
+  menu_id: string;
+  menuItem?: { id: string; name: string; price: number; unit: string };
+  quantity: number;
+  unit_price: number;
+}
+
+const OrderForm = ({ 
+  order, 
+  customers,
+  menuItems,
+  onClose, 
+  onSave,
+  showToast 
+}: { 
+  order?: any,
+  customers: any[],
+  menuItems: any[],
+  onClose: () => void, 
+  onSave: (data: any) => Promise<void>,
+  showToast: (msg: string, type: 'success' | 'error' | 'info') => void
+}) => {
   const [formData, setFormData] = useState({
-    customerName: '',
-    email: '',
-    phone: '',
-    event_type: 'Wedding',
-    event_date: '',
-    guest_count: '',
-    total_amount: '',
-    venue: '',
-    address: ''
+    customer_id: order?.customer_id || '',
+    event_type: order?.event_type || EVENT_TYPES[0],
+    event_date: order?.event_date?.split('T')[0] || '',
+    guest_count: order?.guest_count || '',
+    venue: order?.venue || '',
+    status: order?.status || 'Pending',
+    notes: order?.notes || ''
   });
+  
+  const [items, setItems] = useState<OrderFormItem[]>(order?.orderItems || []);
+  const [selectedItemId, setSelectedItemId] = useState('');
+  const [selectedItemQty, setSelectedItemQty] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.customer_id) newErrors.customer_id = 'Customer is required';
+    if (!formData.event_date) newErrors.event_date = 'Event date is required';
+    const eventDate = new Date(formData.event_date);
+    if (eventDate < new Date(new Date().toISOString().split('T')[0])) {
+      newErrors.event_date = 'Event date must be today or later';
+    }
+    if (!formData.guest_count || parseInt(formData.guest_count) <= 0) newErrors.guest_count = 'Guest count must be greater than 0';
+    if (!formData.venue.trim()) newErrors.venue = 'Venue is required';
+    if (items.length === 0) newErrors.items = 'Add at least one menu item';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const addItem = () => {
+    if (!selectedItemId) {
+      showToast('Select a menu item first', 'error');
+      return;
+    }
+    const menuItem = menuItems.find(m => m.id === selectedItemId);
+    if (!menuItem) return;
+
+    const alreadyExists = items.find(i => i.menu_id === selectedItemId);
+    if (alreadyExists) {
+      setItems(items.map(i => i.menu_id === selectedItemId ? { ...i, quantity: i.quantity + selectedItemQty } : i));
+    } else {
+      setItems([...items, { menu_id: selectedItemId, menuItem, quantity: selectedItemQty, unit_price: menuItem.price }]);
+    }
+    setSelectedItemId('');
+    setSelectedItemQty(1);
+  };
+
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const totalAmount = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const payload = {
+        ...formData,
+        guest_count: parseInt(formData.guest_count),
+        total_amount: totalAmount,
+        orderItems: items.map(i => ({
+          menu_id: i.menu_id,
+          quantity: i.quantity,
+          unit_price: i.unit_price
+        }))
+      };
+
+      await onSave(payload);
+      onClose();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save order', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px', width: '95%' }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>Create New Order</h2>
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, backgroundColor: '#111', zIndex: 10 }}>
+          <h2 style={{ margin: 0 }}>{order?.id ? 'Edit Order' : 'Create New Order'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}><X size={24} /></button>
         </div>
 
-        <form style={{ padding: '2rem' }} onSubmit={(e) => { e.preventDefault(); onSave(formData); }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-             <section>
-                <h3 style={{ fontSize: '0.9rem', color: '#C9A84C', marginBottom: '1rem', textTransform: 'uppercase' }}>Customer Info</h3>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label className="input-label">Full Name</label>
-                  <input required type="text" className="admin-input" value={formData.customerName} onChange={e => setFormData({...formData, customerName: e.target.value})} />
-                </div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label className="input-label">Email Address</label>
-                  <input required type="email" className="admin-input" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-                </div>
-                <div>
-                  <label className="input-label">Phone Number</label>
-                  <input required type="tel" className="admin-input" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-                </div>
-             </section>
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+          {/* CUSTOMER & EVENT DETAILS */}
+          <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <h3 style={{ color: '#C9A84C', fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '1rem' }}>Order Details</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Customer *</label>
+                <select
+                  value={formData.customer_id}
+                  onChange={(e) => setFormData({...formData, customer_id: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#050505',
+                    border: `1px solid ${errors.customer_id ? '#ef4444' : '#333'}`,
+                    borderRadius: '0.5rem',
+                    color: '#fff'
+                  }}
+                >
+                  <option value="">Select a customer...</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name} • {c.phone}</option>)}
+                </select>
+                {errors.customer_id && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.customer_id}</p>}
+              </div>
 
-             <section>
-                <h3 style={{ fontSize: '0.9rem', color: '#C9A84C', marginBottom: '1rem', textTransform: 'uppercase' }}>Event Details</h3>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label className="input-label">Event Type</label>
-                  <select className="admin-input" value={formData.event_type} onChange={e => setFormData({...formData, event_type: e.target.value})}>
-                     <option>Wedding</option>
-                     <option>Corporate</option>
-                     <option>Birthday</option>
-                     <option>Other</option>
-                  </select>
-                </div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label className="input-label">Event Date</label>
-                  <input required type="date" className="admin-input" value={formData.event_date} onChange={e => setFormData({...formData, event_date: e.target.value})} />
-                </div>
-                <div>
-                  <label className="input-label">Guest Count</label>
-                  <input required type="number" className="admin-input" value={formData.guest_count} onChange={e => setFormData({...formData, guest_count: e.target.value})} />
-                </div>
-             </section>
+              <div>
+                <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Event Type *</label>
+                <select
+                  value={formData.event_type}
+                  onChange={(e) => setFormData({...formData, event_type: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#050505',
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    color: '#fff'
+                  }}
+                >
+                  {EVENT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Event Date *</label>
+                <input
+                  type="date"
+                  value={formData.event_date}
+                  onChange={(e) => setFormData({...formData, event_date: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#050505',
+                    border: `1px solid ${errors.event_date ? '#ef4444' : '#333'}`,
+                    borderRadius: '0.5rem',
+                    color: '#fff'
+                  }}
+                />
+                {errors.event_date && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.event_date}</p>}
+              </div>
+
+              <div>
+                <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Guest Count *</label>
+                <input
+                  type="number"
+                  value={formData.guest_count}
+                  onChange={(e) => setFormData({...formData, guest_count: e.target.value})}
+                  min="1"
+                  placeholder="100"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#050505',
+                    border: `1px solid ${errors.guest_count ? '#ef4444' : '#333'}`,
+                    borderRadius: '0.5rem',
+                    color: '#fff'
+                  }}
+                />
+                {errors.guest_count && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.guest_count}</p>}
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Venue/Location *</label>
+                <input
+                  type="text"
+                  value={formData.venue}
+                  onChange={(e) => setFormData({...formData, venue: e.target.value})}
+                  placeholder="e.g., New York Marriott Downtown"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#050505',
+                    border: `1px solid ${errors.venue ? '#ef4444' : '#333'}`,
+                    borderRadius: '0.5rem',
+                    color: '#fff'
+                  }}
+                />
+                {errors.venue && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.venue}</p>}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#050505',
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    color: '#fff'
+                  }}
+                >
+                  {ORDER_TABS.slice(1).map(status => <option key={status} value={status}>{status}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', color: '#A3A3A3', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: '600' }}>Special Notes</label>
+                <input
+                  type="text"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  placeholder="Dietary restrictions, preferences..."
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#050505',
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    color: '#fff'
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-             <div>
-                <label className="input-label">Venue / Location</label>
-                <input required type="text" className="admin-input" value={formData.venue} onChange={e => setFormData({...formData, venue: e.target.value})} />
-             </div>
-             <div>
-                <label className="input-label">Total Amount (INR)</label>
-                <input required type="number" className="admin-input" value={formData.total_amount} onChange={e => setFormData({...formData, total_amount: e.target.value})} />
-             </div>
+          {/* MENU ITEMS SELECTION */}
+          <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <h3 style={{ color: '#C9A84C', fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '1rem' }}>Menu Items</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 80px', gap: '1rem', marginBottom: '1rem' }}>
+              <select
+                value={selectedItemId}
+                onChange={(e) => setSelectedItemId(e.target.value)}
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: '#050505',
+                  border: '1px solid #333',
+                  borderRadius: '0.5rem',
+                  color: '#fff'
+                }}
+              >
+                <option value="">Add menu item...</option>
+                {menuItems.filter(m => m.available).map(m => (
+                  <option key={m.id} value={m.id}>{m.name} • ₹{m.price}</option>
+                ))}
+              </select>
+              
+              <input
+                type="number"
+                value={selectedItemQty}
+                onChange={(e) => setSelectedItemQty(Math.max(1, parseInt(e.target.value) || 1))}
+                min="1"
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: '#050505',
+                  border: '1px solid #333',
+                  borderRadius: '0.5rem',
+                  color: '#fff',
+                  textAlign: 'center'
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={addItem}
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: '#C9A84C',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                Add
+              </button>
+            </div>
+
+            {errors.items && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginBottom: '1rem' }}>{errors.items}</p>}
+
+            {/* ITEMS TABLE */}
+            {items.length > 0 ? (
+              <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <th style={{ textAlign: 'left', padding: '0.75rem', color: '#64748b', fontSize: '0.75rem' }}>Dish</th>
+                      <th style={{ textAlign: 'center', padding: '0.75rem', color: '#64748b', fontSize: '0.75rem' }}>Qty</th>
+                      <th style={{ textAlign: 'right', padding: '0.75rem', color: '#64748b', fontSize: '0.75rem' }}>Price</th>
+                      <th style={{ textAlign: 'right', padding: '0.75rem', color: '#64748b', fontSize: '0.75rem' }}>Subtotal</th>
+                      <th style={{ textAlign: 'center', padding: '0.75rem', color: '#64748b', fontSize: '0.75rem' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        <td style={{ padding: '0.75rem' }}>{item.menuItem?.name}</td>
+                        <td style={{ textAlign: 'center', padding: '0.75rem' }}>
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => setItems(items.map((i, j) => j === idx ? { ...i, quantity: Math.max(1, parseInt(e.target.value) || 1) } : i))}
+                            min="1"
+                            style={{
+                              width: '50px',
+                              padding: '0.4rem',
+                              backgroundColor: '#050505',
+                              border: '1px solid #333',
+                              borderRadius: '0.3rem',
+                              color: '#fff',
+                              textAlign: 'center'
+                            }}
+                          />
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '0.75rem' }}>₹{item.unit_price}</td>
+                        <td style={{ textAlign: 'right', padding: '0.75rem', fontWeight: '600', color: '#C9A84C' }}>₹{(item.unit_price * item.quantity).toFixed(2)}</td>
+                        <td style={{ textAlign: 'center', padding: '0.75rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => removeItem(idx)}
+                            style={{
+                              padding: '0.3rem 0.6rem',
+                              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                              color: '#ef4444',
+                              border: '1px solid #ef4444',
+                              borderRadius: '0.3rem',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '0.5rem', color: '#64748b' }}>
+                Add menu items to create the order
+              </div>
+            )}
+
+            {/* TOTAL */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ color: '#A3A3A3', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Subtotal:</p>
+                <p style={{ fontSize: '1.25rem', fontWeight: '600', color: '#C9A84C', margin: 0 }}>₹{totalAmount.toFixed(2)}</p>
+              </div>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-             <button type="button" onClick={onClose} style={{ padding: '0.75rem 1.5rem', backgroundColor: 'transparent', border: '1px solid #333', color: '#fff', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-             <button type="submit" className="btn-gold" style={{ padding: '0.75rem 2rem' }}>Create Order</button>
+          {/* FORM ACTIONS */}
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#1a1a1a',
+                border: '1px solid #333',
+                color: '#fff',
+                borderRadius: '0.5rem',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#C9A84C',
+                color: '#000',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              {loading && <Loader2 size={16} />}
+              {loading ? 'Creating...' : order?.id ? 'Update Order' : 'Create Order'}
+            </button>
           </div>
         </form>
       </div>
@@ -149,46 +493,67 @@ const OrderModal = ({ order, onClose }: { order: any, onClose: () => void }) => 
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<any>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const { showToast } = useToast();
 
-  const fetchOrders = useCallback(() => {
+  const fetchData = useCallback(() => {
     setLoading(true);
-    fetch('/api/orders')
-      .then(res => res.json())
-      .then(data => {
-        setOrders(data || []);
+    Promise.all([
+      fetch('/api/orders').then(r => r.json()),
+      fetch('/api/customers').then(r => r.json()),
+      fetch('/api/menu').then(r => r.json())
+    ])
+      .then(([orders, customers, menuItems]) => {
+        setOrders(orders || []);
+        setCustomers(customers || []);
+        setMenuItems(menuItems || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Fetch error:', err);
+        showToast('Failed to load data', 'error');
         setLoading(false);
       });
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    fetchData();
+  }, [fetchData]);
 
-  const handleCreateOrder = async (data: any) => {
+  const handleSaveOrder = async (data: any) => {
+    const url = editingOrder ? `/api/orders/${editingOrder.id}` : '/api/orders';
+    const method = editingOrder ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch('/api/orders', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
+      
       if (res.ok) {
-        showToast('New order created successfully', 'success');
-        setIsNewOrderModalOpen(false);
-        fetchOrders();
+        showToast(`✓ Order ${editingOrder ? 'updated' : 'created'} successfully`, 'success');
+        setIsOrderFormOpen(false);
+        setEditingOrder(null);
+        fetchData();
+      } else {
+        const err = await res.json();
+        showToast(err.error || `Failed to ${editingOrder ? 'update' : 'create'} order`, 'error');
       }
-    } catch (error) {
-      showToast('Failed to create order', 'error');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to save order', 'error');
     }
   };
 
-  const handleUpdateStatus = async (id: number, newStatus: string) => {
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
       const res = await fetch(`/api/orders/${id}`, {
         method: 'PUT',
@@ -196,8 +561,10 @@ export default function AdminOrders() {
         body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
-        showToast(`Order status updated to ${newStatus}`, 'success');
-        fetchOrders();
+        showToast(`✓ Status updated to ${newStatus}`, 'success');
+        fetchData();
+      } else {
+        showToast('Failed to update status', 'error');
       }
     } catch (error) {
       showToast('Failed to update status', 'error');
@@ -209,8 +576,11 @@ export default function AdminOrders() {
     try {
       const res = await fetch(`/api/orders/${deleteConfirm}`, { method: 'DELETE' });
       if (res.ok) {
-        showToast('Order and associated invoice deleted', 'success');
-        fetchOrders();
+        showToast('Order deleted successfully', 'success');
+        fetchData();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to delete order', 'error');
       }
     } catch (error) {
       showToast('Failed to delete order', 'error');
@@ -232,7 +602,11 @@ export default function AdminOrders() {
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Order Management</h1>
           <p style={{ color: '#A3A3A3' }}>Track ongoing events, manage confirmations, and handle cancellations.</p>
         </div>
-        <button className="btn-gold" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => setIsNewOrderModalOpen(true)}>
+        <button 
+          className="btn-gold" 
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} 
+          onClick={() => { setEditingOrder(null); setIsOrderFormOpen(true); }}
+        >
           <Plus size={18} /> New Order
         </button>
       </div>
@@ -313,8 +687,9 @@ export default function AdminOrders() {
                   <td style={{ padding: '1.25rem', fontWeight: 'bold' }}>{formatCurrency(order.total_amount)}</td>
                   <td style={{ padding: '1.25rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                       <button onClick={() => setSelectedOrder(order)} className="action-btn"><Eye size={16} /></button>
-                       <button onClick={() => setDeleteConfirm(order.id)} className="action-btn delete"><Trash2 size={16} /></button>
+                       <button onClick={() => setSelectedOrder(order)} className="action-btn" title="View"><Eye size={16} /></button>
+                       <button onClick={() => { setEditingOrder(order); setIsOrderFormOpen(true); }} className="action-btn" title="Edit"><Edit2 size={16} /></button>
+                       <button onClick={() => setDeleteConfirm(order.id)} className="action-btn delete" title="Delete"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -325,7 +700,17 @@ export default function AdminOrders() {
       </div>
 
       {selectedOrder && <OrderModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
-      {isNewOrderModalOpen && <NewOrderModal onClose={() => setIsNewOrderModalOpen(false)} onSave={handleCreateOrder} />}
+      
+      {isOrderFormOpen && (
+        <OrderForm 
+          order={editingOrder} 
+          customers={customers}
+          menuItems={menuItems}
+          onClose={() => { setIsOrderFormOpen(false); setEditingOrder(null); }} 
+          onSave={handleSaveOrder}
+          showToast={showToast}
+        />
+      )}
       
       <ConfirmDialog 
         isOpen={deleteConfirm !== null}

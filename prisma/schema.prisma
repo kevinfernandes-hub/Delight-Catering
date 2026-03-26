@@ -27,6 +27,7 @@ model MenuItem {
   available   Boolean     @default(true)
   created_at  DateTime    @default(now())
   orderItems  OrderItem[]
+  packageItems PackageItem[] @relation("PackageItems")
 }
 
 model Order {
@@ -75,6 +76,31 @@ model Invoice {
   created_at     DateTime  @default(now())
 }
 
+model MenuPackage {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  price       Float       // Price per guest/serving
+  items       PackageItem[]
+  category    String      // Gold, Silver, Platinum, Custom, etc.
+  active      Boolean     @default(true)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+}
+
+model PackageItem {
+  id          String      @id @default(cuid())
+  package_id  String
+  package     MenuPackage @relation(fields: [package_id], references: [id], onDelete: Cascade)
+  menu_id     String
+  menuItem    MenuItem    @relation("PackageItems", fields: [menu_id], references: [id])
+  quantity    Int         // Per guest
+  created_at  DateTime    @default(now())
+
+  @@index([package_id])
+  @@index([menu_id])
+}
+
 model Contact {
   id          String   @id @default(cuid())
   name        String
@@ -85,4 +111,20 @@ model Contact {
   guest_count Int
   message     String?
   created_at  DateTime @default(now())
+}
+
+model MenuOrder {
+  id              String   @id @default(cuid())
+  customer_name   String
+  guest_count     Int
+  items           String   // JSON string of selected items with quantities
+  subtotal        Float
+  tax_amount      Float
+  total_price     Float
+  status          String   @default("Pending") // Pending, Confirmed, Rejected
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  
+  @@index([status])
+  @@index([created_at])
 }

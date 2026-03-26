@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LoginSchema } from '@/lib/validations';
-import { validateCredentials, generateSessionToken } from '@/lib/auth';
+import { validateCredentials, generateJWT } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,14 +25,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate session token
-    const token = generateSessionToken();
+    // Generate JWT token (24 hour expiration)
+    const token = await generateJWT(email, '24h');
 
-    // Store token in environment for this session
-    // In production, use a database or cache like Redis
-    process.env.SESSION_TOKEN = token;
-
-    return NextResponse.json(
+    // Create response with token in secure cookie and JSON body
+    const response = NextResponse.json(
       {
         message: 'Login successful',
         token,
@@ -40,6 +37,16 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
+
+    // Set secure HTTP-only cookie for browser-based auth
+    response.cookies.set('admin_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 // 24 hours
+    });
+
+    return response;
   } catch (error) {
     console.error('Login endpoint error:', error);
     return NextResponse.json(

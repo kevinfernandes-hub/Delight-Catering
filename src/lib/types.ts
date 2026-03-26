@@ -12,7 +12,7 @@ export interface Customer {
   email: string;
   phone: string;
   address: string;
-  notes?: string;
+  notes?: string | null;
   created_at: Date;
 }
 
@@ -51,7 +51,7 @@ export interface Order {
   status: 'Pending' | 'Confirmed' | 'In-Progress' | 'Completed' | 'Cancelled';
   total_amount: number;
   venue: string;
-  notes?: string;
+  notes?: string | null;
   created_at: Date;
   invoice?: Invoice;
   orderItems?: OrderItem[];
@@ -85,6 +85,42 @@ export interface Contact {
   guest_count: number;
   message?: string;
   created_at: Date;
+}
+
+// Menu Package Types
+export interface PackageItem {
+  id: string;
+  package_id: string;
+  menu_id: string;
+  menuItem?: MenuItem;
+  quantity: number;
+  created_at: Date;
+}
+
+export interface MenuPackage {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category: string;
+  items: PackageItem[];
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Menu Order Types (from MenuBuilder)
+export interface MenuOrder {
+  id: string;
+  customer_name: string;
+  guest_count: number;
+  items: string; // JSON string of selected items
+  subtotal: number;
+  tax_amount: number;
+  total_price: number;
+  status: 'Pending' | 'Confirmed' | 'Rejected';
+  created_at: Date;
+  updated_at: Date;
 }
 
 // Admin Session Types
