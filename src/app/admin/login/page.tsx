@@ -13,18 +13,20 @@ export default function AdminLogin() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if already logged in by attempting to access a protected endpoint
     const checkAuth = async () => {
       try {
-        const res = await fetch('/api/orders', { credentials: 'include' });
+        const res = await fetch('/api/auth/verify', {
+          credentials: 'include',
+          cache: 'no-store',
+        });
         if (res.ok) {
-          // Already authenticated, redirect to dashboard
-          router.push('/admin/dashboard');
+          router.replace('/admin/dashboard');
         }
       } catch (err) {
-        // Not authenticated, stay on login page
+        // Stay on the login page when the session is missing or invalid.
       }
     };
+
     checkAuth();
   }, [router]);
 
@@ -58,9 +60,7 @@ export default function AdminLogin() {
         return;
       }
 
-      // Token already set in httpOnly cookie by server
-      // Redirect to dashboard
-      router.push('/admin/dashboard');
+      router.replace('/admin/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       setError('An error occurred. Please try again.');

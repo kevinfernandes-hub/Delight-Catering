@@ -29,18 +29,48 @@ export default function AdminLayout({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Auth Protection Check
-    const session = localStorage.getItem('admin_session');
-    if (!session && pathname !== '/admin/login') {
-      router.push('/admin/login');
-    } else if (isLoading) {
+    if (pathname === '/admin/login') {
       setIsLoading(false);
+      return;
     }
-  }, [pathname, router, isLoading]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_session');
-    router.push('/admin/login');
+    let isMounted = true;
+
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/verify', {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+
+        if (!res.ok && isMounted) {
+          router.replace('/admin/login');
+          return;
+        }
+
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      } catch {
+        if (isMounted) {
+          router.replace('/admin/login');
+        }
+      }
+    };
+
+    checkSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pathname, router]);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
+    router.replace('/admin/login');
   };
 
   if (isLoading && pathname !== '/admin/login') {
@@ -66,7 +96,7 @@ export default function AdminLayout({
     { name: 'Menu Orders', path: '/admin/menu-orders', icon: <ShoppingCart size={20} /> },
     { name: 'Bills', path: '/admin/bills', icon: <Receipt size={20} /> },
     { name: 'Customers', path: '/admin/customers', icon: <Users size={20} /> },
-    { name: 'Menu', path: '/admin/menu', icon: <MenuIcon size={20} /> },
+    { name: 'Packages', path: '/admin/packages', icon: <MenuIcon size={20} /> },
   ];
 
   return (

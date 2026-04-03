@@ -16,9 +16,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { customer_name, guest_count, items, subtotal, tax_amount, total_price } = body;
+    const { customer_name, customer_phone, guest_count, items, subtotal, tax_amount, total_price } = body;
 
-    if (!customer_name || !guest_count || !items || !total_price) {
+    if (!customer_name || !customer_phone || !guest_count || !items || !total_price) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }

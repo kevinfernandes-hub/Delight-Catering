@@ -27,6 +27,18 @@ interface MenuPackage {
   active: boolean;
 }
 
+const TIER_PRICES = {
+  Normal: 200,
+  Basic: 250,
+  Special: 330,
+  Silver: 400,
+  Gold: 500,
+  Platinum: 600,
+  Customized: 750,
+} as const;
+
+type TierName = keyof typeof TIER_PRICES;
+
 export default function AdminPackages() {
   const { showToast } = useToast();
   const [packages, setPackages] = useState<MenuPackage[]>([]);
@@ -39,15 +51,17 @@ export default function AdminPackages() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    price: '',
-    category: 'Gold',
+    price: String(TIER_PRICES.Normal),
+    category: 'Normal',
     items: [] as PackageItem[],
   });
 
   const [selectedItemId, setSelectedItemId] = useState('');
   const [selectedItemQty, setSelectedItemQty] = useState(1);
 
-  const categories = ['Gold', 'Silver', 'Platinum', 'Custom', 'Wedding', 'Corporate', 'Birthday'];
+  const categories: TierName[] = ['Normal', 'Basic', 'Special', 'Silver', 'Gold', 'Platinum', 'Customized'];
+
+  const getTierPackageName = (tier: TierName) => `${tier} Package`;
 
   // Fetch packages and menu items
   useEffect(() => {
@@ -128,7 +142,7 @@ export default function AdminPackages() {
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
-          price: parseFloat(formData.price),
+          price: TIER_PRICES[formData.category as TierName],
           category: formData.category,
           items: formData.items.map(i => ({
             menu_id: i.menu_id,
@@ -175,24 +189,44 @@ export default function AdminPackages() {
   };
 
   const handleEditPackage = (pkg: MenuPackage) => {
+    const safeCategory: TierName = categories.includes(pkg.category as TierName)
+      ? (pkg.category as TierName)
+      : 'Normal';
+
     setEditingPackage(pkg);
     setFormData({
       name: pkg.name,
       description: pkg.description || '',
-      price: pkg.price.toString(),
-      category: pkg.category,
+      price: String(TIER_PRICES[safeCategory]),
+      category: safeCategory,
       items: pkg.items,
     });
     setShowForm(true);
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', price: '', category: 'Gold', items: [] });
+    setFormData({
+      name: getTierPackageName('Normal'),
+      description: '',
+      price: String(TIER_PRICES.Normal),
+      category: 'Normal',
+      items: [],
+    });
     setEditingPackage(null);
     setShowForm(false);
     setSelectedItemId('');
     setSelectedItemQty(1);
   };
+
+  useEffect(() => {
+    if (editingPackage) return;
+    const tier = formData.category as TierName;
+    setFormData(prev => ({
+      ...prev,
+      name: getTierPackageName(tier),
+      price: String(TIER_PRICES[tier]),
+    }));
+  }, [formData.category, editingPackage]);
 
   const calculatePackagePrice = () => {
     return formData.items.reduce((sum, item) => {
@@ -310,11 +344,12 @@ export default function AdminPackages() {
               {/* Price */}
               <input
                 type="number"
-                placeholder="Price Per Guest/Serving"
+                placeholder="Price per plate"
                 value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                onChange={() => {}}
                 step="10"
                 min="0"
+                readOnly
                 style={{
                   padding: '0.75rem',
                   backgroundColor: '#222',
@@ -323,6 +358,9 @@ export default function AdminPackages() {
                   color: '#fff',
                 }}
               />
+              <p style={{ margin: '-0.5rem 0 0', color: '#999', fontSize: '0.8rem' }}>
+                Price is fixed by tier: Normal ₹200, Basic ₹250, Special ₹330, Silver ₹400, Gold ₹500, Platinum ₹600, Customized ₹750+ per plate.
+              </p>
 
               {/* Add Items */}
               <div style={{ backgroundColor: '#222', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #444' }}>

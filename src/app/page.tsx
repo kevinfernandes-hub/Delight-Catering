@@ -381,7 +381,7 @@ export default function Home() {
             />
           </div>
           <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-              <a href="/menu" className="btn btn-gold hover-target">See Full Menu</a>
+              <a href="/menu" className="btn btn-gold hover-target">See Catering Packages</a>
           </div>
         </div>
       </section>

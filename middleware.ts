@@ -8,7 +8,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 export async function middleware(request: NextRequest) {
   // Skip middleware for public routes
-  const publicRoutes = ['/', '/menu', '/api/reviews', '/api/contacts', '/api/auth/login'];
+  const publicRoutes = ['/', '/menu', '/api/reviews', '/api/contacts', '/api/auth/login', '/api/auth/verify', '/api/auth/logout'];
   
   if (publicRoutes.some(route => request.nextUrl.pathname === route)) {
     return NextResponse.next();

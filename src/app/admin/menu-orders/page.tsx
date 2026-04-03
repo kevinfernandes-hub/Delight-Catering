@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, XCircle, Trash2, Loader2, ChevronRight } from 'lucide-react';
+import { CheckCircle2, XCircle, Trash2, Loader2, Pencil } from 'lucide-react';
 import { useToast } from '@/app/components/admin/Toast';
 import ConfirmDialog from '@/app/components/admin/ConfirmDialog';
 
@@ -18,12 +18,25 @@ interface MenuOrder {
   updated_at: string;
 }
 
+interface ParsedMenuOrderPayload {
+  package?: {
+    name?: string;
+    category?: string;
+    per_plate_price?: number;
+  };
+  customer_phone?: string;
+}
+
 export default function MenuOrdersPage() {
   const [orders, setOrders] = useState<MenuOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<MenuOrder | null>(null);
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [pricingOrder, setPricingOrder] = useState<MenuOrder | null>(null);
+  const [priceForm, setPriceForm] = useState({ subtotal: '', tax_amount: '', total_price: '' });
+  const [priceSaving, setPriceSaving] = useState(false);
   const { showToast } = useToast();
 
   const statusColors: Record<string, string> = {
@@ -90,6 +103,72 @@ export default function MenuOrdersPage() {
     } finally {
       setShowConfirm(false);
       setSelectedOrder(null);
+    }
+  };
+
+  const handleEditPricing = (order: MenuOrder) => {
+    const computedTotal = Number(order.subtotal) + Number(order.tax_amount);
+    setPricingOrder(order);
+    setPriceForm({
+      subtotal: String(order.subtotal),
+      tax_amount: String(order.tax_amount),
+      total_price: String(computedTotal),
+    });
+    setShowPriceModal(true);
+  };
+
+  const updatePricingField = (field: 'subtotal' | 'tax_amount', value: string) => {
+    setPriceForm(prev => {
+      const next = { ...prev, [field]: value };
+      const subtotal = Number(next.subtotal) || 0;
+      const tax = Number(next.tax_amount) || 0;
+      return {
+        ...next,
+        total_price: String(subtotal + tax),
+      };
+    });
+  };
+
+  const closePriceModal = () => {
+    setShowPriceModal(false);
+    setPricingOrder(null);
+    setPriceForm({ subtotal: '', tax_amount: '', total_price: '' });
+  };
+
+  const handleSavePricing = async () => {
+    if (!pricingOrder) return;
+
+    const subtotal = Number(priceForm.subtotal);
+    const tax_amount = Number(priceForm.tax_amount);
+    const total_price = Number(priceForm.total_price);
+
+    if (!Number.isFinite(subtotal) || !Number.isFinite(tax_amount) || !Number.isFinite(total_price)) {
+      showToast('Please enter valid numeric values', 'error');
+      return;
+    }
+
+    try {
+      setPriceSaving(true);
+      const response = await fetch(`/api/menu-orders/${pricingOrder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subtotal, tax_amount, total_price }),
+      });
+
+      if (!response.ok) {
+        showToast('Failed to update pricing', 'error');
+        return;
+      }
+
+      const updated = await response.json();
+      setOrders(prev => prev.map(o => (o.id === pricingOrder.id ? updated : o)));
+      showToast('Pricing updated successfully', 'success');
+      closePriceModal();
+    } catch (error) {
+      console.error('Error updating pricing:', error);
+      showToast('Failed to update pricing', 'error');
+    } finally {
+      setPriceSaving(false);
     }
   };
 
@@ -169,9 +248,15 @@ export default function MenuOrdersPage() {
               }}
             >
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 200px', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+                {(() => {
+                  const parsed = parseItems(order.items) as ParsedMenuOrderPayload | any[];
+                  const phone = Array.isArray(parsed) ? '' : parsed.customer_phone || '';
+                  return (
+                    <>
                 <div>
                   <p style={{ color: '#999', fontSize: '0.85rem', marginBottom: '0.25rem' }}>CUSTOMER</p>
                   <p style={{ fontWeight: 'bold', color: '#fff' }}>{order.customer_name}</p>
+                  {phone && <p style={{ color: '#bbb', fontSize: '0.82rem', marginTop: '0.2rem' }}>{phone}</p>}
                 </div>
                 <div>
                   <p style={{ color: '#999', fontSize: '0.85rem', marginBottom: '0.25rem' }}>GUESTS</p>
@@ -196,6 +281,22 @@ export default function MenuOrdersPage() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => handleEditPricing(order)}
+                    title="Edit Pricing"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#C9A84C',
+                      cursor: 'pointer',
+                      padding: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                    }}
+                  >
+                    <Pencil size={16} />
+                  </button>
                   {order.status === 'Pending' && (
                     <>
                       <button
@@ -249,23 +350,46 @@ export default function MenuOrdersPage() {
                     <Trash2 size={18} />
                   </button>
                 </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Items Breakdown */}
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #333' }}>
-                <p style={{ color: '#C9A84C', fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: 'bold' }}>SELECTED ITEMS:</p>
+                <p style={{ color: '#C9A84C', fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: 'bold' }}>PACKAGE DETAILS:</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-                  {parseItems(order.items).map((item: any, idx: number) => (
-                    <span key={idx} style={{
-                      backgroundColor: '#0a0a0a',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.85rem',
-                      color: '#ccc',
-                    }}>
-                      Item × {item.quantity}
-                    </span>
-                  ))}
+                  {(() => {
+                    const parsed = parseItems(order.items) as ParsedMenuOrderPayload | any[];
+
+                    if (!Array.isArray(parsed) && parsed.package) {
+                      return (
+                        <>
+                          <span style={{ backgroundColor: '#0a0a0a', padding: '0.5rem 1rem', borderRadius: '0.25rem', fontSize: '0.85rem', color: '#ccc' }}>
+                            Package: {parsed.package.name || 'Custom Package'}
+                          </span>
+                          <span style={{ backgroundColor: '#0a0a0a', padding: '0.5rem 1rem', borderRadius: '0.25rem', fontSize: '0.85rem', color: '#ccc' }}>
+                            Tier: {parsed.package.category || 'N/A'}
+                          </span>
+                          <span style={{ backgroundColor: '#0a0a0a', padding: '0.5rem 1rem', borderRadius: '0.25rem', fontSize: '0.85rem', color: '#ccc' }}>
+                            Per Plate: ₹{parsed.package.per_plate_price || 0}
+                          </span>
+                        </>
+                      );
+                    }
+
+                    return (Array.isArray(parsed) ? parsed : []).map((item: any, idx: number) => (
+                      <span key={idx} style={{
+                        backgroundColor: '#0a0a0a',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.85rem',
+                        color: '#ccc',
+                      }}>
+                        Item × {item.quantity}
+                      </span>
+                    ));
+                  })()}
                 </div>
 
                 {/* Price Breakdown */}
@@ -307,6 +431,85 @@ export default function MenuOrdersPage() {
         confirmVariant='danger'
         confirmLabel='Delete'
       />
+
+      {showPriceModal && pricingOrder && (
+        <div
+          onClick={closePriceModal}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '420px',
+              backgroundColor: '#1a1a1a',
+              border: '1px solid #333',
+              borderRadius: '0.6rem',
+              padding: '1rem',
+            }}
+          >
+            <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '0.4rem' }}>Edit Pricing</h3>
+            <p style={{ color: '#999', marginTop: 0, marginBottom: '1rem', fontSize: '0.9rem' }}>
+              {pricingOrder.customer_name} ({pricingOrder.guest_count} people)
+            </p>
+
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceForm.subtotal}
+                onChange={(e) => updatePricingField('subtotal', e.target.value)}
+                placeholder="Subtotal"
+                style={{ padding: '0.7rem', borderRadius: '0.4rem', border: '1px solid #444', backgroundColor: '#111', color: '#fff' }}
+              />
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceForm.tax_amount}
+                onChange={(e) => updatePricingField('tax_amount', e.target.value)}
+                placeholder="Tax amount"
+                style={{ padding: '0.7rem', borderRadius: '0.4rem', border: '1px solid #444', backgroundColor: '#111', color: '#fff' }}
+              />
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceForm.total_price}
+                readOnly
+                placeholder="Total price"
+                style={{ padding: '0.7rem', borderRadius: '0.4rem', border: '1px solid #444', backgroundColor: '#0d0d0d', color: '#C9A84C' }}
+              />
+            </div>
+
+            <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
+              <button
+                onClick={closePriceModal}
+                style={{ padding: '0.6rem 0.9rem', borderRadius: '0.4rem', border: '1px solid #444', backgroundColor: '#222', color: '#ddd', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePricing}
+                disabled={priceSaving}
+                style={{ padding: '0.6rem 0.9rem', borderRadius: '0.4rem', border: 'none', backgroundColor: '#C9A84C', color: '#111', cursor: priceSaving ? 'not-allowed' : 'pointer', fontWeight: 700 }}
+              >
+                {priceSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
