@@ -1,12 +1,11 @@
 import "dotenv/config";
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-import { PrismaLibSql } from '@prisma/adapter-libsql';
-
-const prisma = new PrismaClient({
-  adapter: new PrismaLibSql({ url: process.env.DATABASE_URL || 'file:dev.db' }),
-} as any);
-// Prisma 7 should pick up the URL from process.env.DATABASE_URL automatically if correctly generated
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const customerCount = await prisma.customer.count();
