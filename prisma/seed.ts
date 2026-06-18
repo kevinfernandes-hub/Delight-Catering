@@ -9,6 +9,12 @@ const prisma = new PrismaClient({
 // Prisma 7 should pick up the URL from process.env.DATABASE_URL automatically if correctly generated
 
 async function main() {
+  const customerCount = await prisma.customer.count();
+  if (customerCount > 0) {
+    console.log('Database already contains data, skipping seed.');
+    return;
+  }
+
   console.log('Seeding data...');
 
   // 1. Customers
