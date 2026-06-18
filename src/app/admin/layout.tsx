@@ -9,12 +9,14 @@ import {
   ShoppingCart, 
   Receipt, 
   Users, 
+  CalendarDays,
   Menu as MenuIcon, 
   LogOut,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  Menu
+  Menu,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export default function AdminLayout({
@@ -92,11 +94,13 @@ export default function AdminLayout({
 
   const menuItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
+    { name: 'Calendar', path: '/admin/calendar', icon: <CalendarDays size={20} /> },
     { name: 'Orders', path: '/admin/orders', icon: <ShoppingCart size={20} /> },
     { name: 'Menu Orders', path: '/admin/menu-orders', icon: <ShoppingCart size={20} /> },
     { name: 'Bills', path: '/admin/bills', icon: <Receipt size={20} /> },
     { name: 'Customers', path: '/admin/customers', icon: <Users size={20} /> },
     { name: 'Packages', path: '/admin/packages', icon: <MenuIcon size={20} /> },
+    { name: 'Manage Images', path: '/admin/images', icon: <ImageIcon size={20} /> },
   ];
 
   return (

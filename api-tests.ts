@@ -31,9 +31,25 @@ async function apiCallTest(method: string, endpoint: string, body?: any, token?:
     body: body ? JSON.stringify(body) : undefined,
   });
 
+  let data = null;
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    try {
+      data = await response.json();
+    } catch (_) {
+      // ignore
+    }
+  } else {
+    try {
+      data = await response.text();
+    } catch (_) {
+      // ignore
+    }
+  }
+
   return {
     status: response.status,
-    data: await response.json(),
+    data,
   };
 }
 
@@ -110,7 +126,7 @@ async function testCreateCustomer() {
   try {
     const result = await apiCallTest('POST', '/api/customers', {
       name: 'Test Customer',
-      email: 'test@example.com',
+      email: `test-${Date.now()}@example.com`,
       phone: '9876543210',
       address: '123 Test Street',
       notes: 'Test customer for validation',

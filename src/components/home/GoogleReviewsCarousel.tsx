@@ -86,7 +86,7 @@ export default function GoogleReviewsCarousel({ businessId }: { businessId: stri
           </div>
         </div>
         <a
-          href="https://www.google.com/maps/place/?q=place_id:ChIJCarUqdTB1DsRmka62G97Kqw"
+          href="https://www.google.com/maps/search/?api=1&query=Delight+Caterers+Katol+Road+Nagpur"
           target="_blank"
           rel="noopener noreferrer"
           className="review-button"

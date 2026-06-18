@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+const ACTIVE_EVENT_STATUSES = ['Confirmed', 'In-Progress'];
+
+function dayRange(value: Date) {
+  const start = new Date(value);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(value);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function isVenueLockable(venue: string) {
+  const normalized = (venue || '').trim().toLowerCase();
+  if (!normalized) return false;
+  return normalized !== 'to be confirmed' && normalized !== 'tbd';
+}
+
 export async function GET() {
   try {
     const orders = await prisma.order.findMany({
@@ -33,6 +49,7 @@ export async function POST(request: Request) {
       total_amount, 
       venue, 
       notes, 
+      status,
       orderItems,
       items // alternative name for items array
     } = body;
@@ -74,6 +91,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Customer information is required' }, { status: 400 });
     }
 
+    const parsedDate = new Date(event_date);
+    const orderStatus = status || 'Pending';
+
+    if (ACTIVE_EVENT_STATUSES.includes(orderStatus) && isVenueLockable(venue || '')) {
+      const range = dayRange(parsedDate);
+      const existingEvent = await prisma.order.findFirst({
+        where: {
+          event_date: { gte: range.start, lte: range.end },
+          venue: venue,
+          status: { in: ACTIVE_EVENT_STATUSES },
+        },
+        select: { id: true },
+      });
+
+      if (existingEvent) {
+        return NextResponse.json(
+          { error: 'Venue is already booked for this date. Please choose another date or venue.' },
+          { status: 409 }
+        );
+      }
+    }
+
     console.log('Creating order with customer_id:', finalCustomerId);
 
     // Create order
@@ -81,11 +120,11 @@ export async function POST(request: Request) {
       data: {
         customer_id: finalCustomerId,
         event_type,
-        event_date: new Date(event_date),
+        event_date: parsedDate,
         guest_count: parseInt(guest_count),
         total_amount: parseFloat(total_amount),
         venue: venue || '',
-        status: 'Pending',
+        status: orderStatus,
         notes: notes || ''
       }
     });

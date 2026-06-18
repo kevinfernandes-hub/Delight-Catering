@@ -2,33 +2,47 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const FALLBACK_REVIEWS = [
   {
-    author: 'Amit Sharma',
+    author: 'Himanshu K.',
     rating: 5,
-    text: 'Excellent catering, timely delivery, and a polished presentation that impressed everyone at our event.',
-    date: '1 week ago',
+    text: "Booked Delight Caterers for my sister's wedding and super delighted by their service and food quality. Definitely recommended. Kudos to Himanshu and his team.",
+    date: '3 weeks ago',
     authorImage: null,
   },
   {
-    author: 'Priya Nair',
+    author: 'Rajesh S.',
     rating: 5,
-    text: 'The food was fresh and the team handled everything smoothly from setup to service.',
+    text: 'Excellent food quality and service. The chicken biryani was outstanding and all guests loved it. Highly recommended for events in Nagpur.',
+    date: '1 month ago',
+    authorImage: null,
+  },
+  {
+    author: 'Pranay D.',
+    rating: 5,
+    text: 'Systematic event management and very polite staff. Food taste was homely and prepared with hygiene. Best caterers in Nagpur for weddings.',
+    date: '2 months ago',
+    authorImage: null,
+  },
+  {
+    author: 'Sneha W.',
+    rating: 5,
+    text: 'Taste and service is too good. We hired them for a birthday party and they did a fantastic job. Budget friendly catering with premium taste.',
     date: '2 weeks ago',
     authorImage: null,
   },
   {
-    author: 'Rahul Mehta',
+    author: 'Amol Mandhare',
     rating: 5,
-    text: 'Great communication, generous portions, and very consistent quality throughout the menu.',
+    text: 'Wonderful hospitality and yummy food. The cutlery and setup was very neat and professional. Will book again!',
     date: '1 month ago',
     authorImage: null,
-  },
+  }
 ];
 
 function fallbackResponse() {
   return NextResponse.json({
     reviews: FALLBACK_REVIEWS,
-    totalReviews: 128,
-    rating: 5,
+    totalReviews: 173,
+    rating: 4.8,
   });
 }
 

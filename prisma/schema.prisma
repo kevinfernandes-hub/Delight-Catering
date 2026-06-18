@@ -128,3 +128,19 @@ model MenuOrder {
   @@index([status])
   @@index([created_at])
 }
+
+model ImageAsset {
+  id         String   @id @default(cuid())
+  key        String   @unique // e.g. "hero_bg", "about_plating", "package_snacks", "package_biryani", "package_buffet"
+  url        String
+  title      String?
+  updated_at DateTime @updatedAt
+}
+
+model GalleryImage {
+  id         String   @id @default(cuid())
+  url        String
+  title      String
+  created_at DateTime @default(now())
+}
+

@@ -22,6 +22,7 @@ import {
 import { formatCurrency, formatDate, formatOrderId } from '@/lib/utils';
 import { useToast } from '@/app/components/admin/Toast';
 import ConfirmDialog from '@/app/components/admin/ConfirmDialog';
+import Link from 'next/link';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -496,6 +497,7 @@ export default function AdminOrders() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -506,21 +508,40 @@ export default function AdminOrders() {
 
   const fetchData = useCallback(() => {
     setLoading(true);
+    setError(null);
+
+    const fetchJson = async (url: string) => {
+      const res = await fetch(url);
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('Unauthorized');
+        }
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed to fetch from ${url}`);
+      }
+      return res.json();
+    };
+
     Promise.all([
-      fetch('/api/orders').then(r => r.json()),
-      fetch('/api/customers').then(r => r.json()),
-      fetch('/api/menu').then(r => r.json())
+      fetchJson('/api/orders'),
+      fetchJson('/api/customers'),
+      fetchJson('/api/menu')
     ])
-      .then(([orders, customers, menuItems]) => {
-        setOrders(orders || []);
-        setCustomers(customers || []);
-        setMenuItems(menuItems || []);
+      .then(([ordersData, customersData, menuItemsData]) => {
+        setOrders(Array.isArray(ordersData) ? ordersData : []);
+        setCustomers(Array.isArray(customersData) ? customersData : []);
+        setMenuItems(Array.isArray(menuItemsData) ? menuItemsData : []);
         setLoading(false);
       })
       .catch(err => {
         console.error('Fetch error:', err);
-        showToast('Failed to load data', 'error');
+        setError(err.message);
         setLoading(false);
+        if (err.message === 'Unauthorized') {
+          showToast('Session expired. Please log in again.', 'error');
+        } else {
+          showToast(err.message || 'Failed to load data', 'error');
+        }
       });
   }, [showToast]);
 
@@ -588,12 +609,12 @@ export default function AdminOrders() {
     setDeleteConfirm(null);
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = Array.isArray(orders) ? orders.filter(order => {
     const matchesTab = activeTab === 'All' || order.status === activeTab;
-    const matchesSearch = order.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = (order.customer?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                           formatOrderId(order.id).toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
-  });
+  }) : [];
 
   return (
     <div className="animate-fade-in">
@@ -664,6 +685,26 @@ export default function AdminOrders() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={6} style={{ padding: '4rem', textAlign: 'center', color: '#64748b' }}>Consulting central database...</td></tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: '4rem', textAlign: 'center', color: '#ef4444' }}>
+                    <div style={{ maxWidth: '400px', margin: '0 auto' }}>
+                      <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Failed to load orders data</p>
+                      <p style={{ fontSize: '0.85rem', color: '#a3a3a3', marginBottom: '1rem' }}>{error}</p>
+                      {error === 'Unauthorized' ? (
+                        <Link href="/admin/login" className="btn-gold" style={{ display: 'inline-block', fontSize: '0.8rem', textDecoration: 'none' }}>
+                          Log In Again
+                        </Link>
+                      ) : (
+                        <button onClick={fetchData} className="btn-gold" style={{ fontSize: '0.8rem' }}>
+                          Retry
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredOrders.length === 0 ? (
+                <tr><td colSpan={6} style={{ padding: '4rem', textAlign: 'center', color: '#64748b' }}>No orders found</td></tr>
               ) : filteredOrders.map((order) => (
                 <tr key={order.id} className="table-row">
                   <td style={{ padding: '1.25rem', fontWeight: '600', color: '#C9A84C' }}>{formatOrderId(order.id)}</td>

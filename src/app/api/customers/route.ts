@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         notes: data.notes,
       },
     });
-    return NextResponse.json(customer);
+    return NextResponse.json(customer, { status: 201 });
   } catch (error) {
     console.error('Customers POST error:', error);
     return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 });

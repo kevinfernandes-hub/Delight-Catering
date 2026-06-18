@@ -2,6 +2,36 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
+const ACTIVE_EVENT_STATUSES = ['Confirmed', 'In-Progress'];
+
+function dayRange(value: Date) {
+  const start = new Date(value);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(value);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function isVenueLockable(venue: string) {
+  const normalized = (venue || '').trim().toLowerCase();
+  if (!normalized) return false;
+  return normalized !== 'to be confirmed' && normalized !== 'tbd';
+}
+
+async function hasVenueConflict(orderId: string, eventDate: Date, venue: string) {
+  const range = dayRange(eventDate);
+  const existingEvent = await prisma.order.findFirst({
+    where: {
+      id: { not: orderId },
+      event_date: { gte: range.start, lte: range.end },
+      venue: venue,
+      status: { in: ACTIVE_EVENT_STATUSES },
+    },
+    select: { id: true },
+  });
+  return Boolean(existingEvent);
+}
+
 const UpdateOrderSchema = z.object({
   status: z.enum(['Pending', 'Confirmed', 'In-Progress', 'Completed', 'Cancelled']),
 });
@@ -40,8 +70,27 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     
+    const existingOrder = await prisma.order.findUnique({
+      where: { id },
+      select: { event_date: true, venue: true },
+    });
+
+    if (!existingOrder) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
     // Check if this is a status-only update (from status dropdown)
     if (Object.keys(body).length === 1 && body.status) {
+      if (ACTIVE_EVENT_STATUSES.includes(body.status) && isVenueLockable(existingOrder.venue || '')) {
+        const conflict = await hasVenueConflict(id, new Date(existingOrder.event_date), existingOrder.venue || '');
+        if (conflict) {
+          return NextResponse.json(
+            { error: 'Venue is already booked for this date. Please choose another date or venue.' },
+            { status: 409 }
+          );
+        }
+      }
+
       const order = await prisma.order.update({
         where: { id },
         data: { status: body.status }
@@ -52,17 +101,31 @@ export async function PUT(
     // Full order update (from OrderForm)
     const { customer_id, event_type, event_date, guest_count, venue, notes, status, total_amount, orderItems } = body;
 
+    const parsedDate = new Date(event_date);
+    const parsedVenue = venue || '';
+    const nextStatus = status || 'Pending';
+
+    if (ACTIVE_EVENT_STATUSES.includes(nextStatus) && isVenueLockable(parsedVenue)) {
+      const conflict = await hasVenueConflict(id, parsedDate, parsedVenue);
+      if (conflict) {
+        return NextResponse.json(
+          { error: 'Venue is already booked for this date. Please choose another date or venue.' },
+          { status: 409 }
+        );
+      }
+    }
+
     // Update order
     const order = await prisma.order.update({
       where: { id },
       data: {
         customer_id,
         event_type,
-        event_date: new Date(event_date),
+        event_date: parsedDate,
         guest_count: parseInt(guest_count),
         total_amount: parseFloat(total_amount),
-        venue: venue || '',
-        status: status || 'Pending',
+        venue: parsedVenue,
+        status: nextStatus,
         notes: notes || ''
       }
     });

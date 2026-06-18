@@ -7,6 +7,7 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 
 export async function middleware(request: NextRequest) {
+  console.log('MIDDLEWARE TRIGGERED for path:', request.nextUrl.pathname);
   // Skip middleware for public routes
   const publicRoutes = ['/', '/menu', '/api/reviews', '/api/contacts', '/api/auth/login', '/api/auth/verify', '/api/auth/logout'];
   
@@ -40,7 +41,7 @@ export async function middleware(request: NextRequest) {
 
   // Protect /api routes (except public ones)
   if (request.nextUrl.pathname.startsWith('/api')) {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    const token = request.headers.get('authorization')?.replace('Bearer ', '') || request.cookies.get('admin_token')?.value;
     
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,6 +61,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
+    '/api/admin/:path*',
     '/api/customers/:path*',
     '/api/orders/:path*',
     '/api/invoices/:path*',

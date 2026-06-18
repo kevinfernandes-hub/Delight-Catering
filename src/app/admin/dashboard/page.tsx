@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatOrderId } from '@/lib/utils';
 import Link from 'next/link';
+import { useToast } from '@/app/components/admin/Toast';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -38,21 +39,59 @@ const SummaryCard = ({ title, value, icon, color, subtitle }: any) => (
 );
 
 export default function AdminDashboard() {
+  const { showToast } = useToast();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/stats');
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('Unauthorized');
+        }
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to fetch dashboard statistics');
+      }
+      const data = await res.json();
+      setStats(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+      if (err.message === 'Unauthorized') {
+        showToast('Session expired. Please log in again.', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch('/api/stats')
-      .then(res => res.json())
-      .then(data => {
-        setStats(data);
-        setLoading(false);
-      });
+    fetchStats();
   }, []);
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
       <p style={{ color: '#C9A84C' }}>Loading summary data...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444', backgroundColor: '#111', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', maxWidth: '600px', margin: '2rem auto' }}>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Failed to Load Dashboard</h3>
+      <p style={{ marginBottom: '1.5rem', fontSize: '0.95rem' }}>{error}</p>
+      {error === 'Unauthorized' ? (
+        <Link href="/admin/login" className="btn btn-gold" style={{ display: 'inline-block', textDecoration: 'none' }}>
+          Go to Login
+        </Link>
+      ) : (
+        <button onClick={fetchStats} className="btn btn-gold">
+          Retry
+        </button>
+      )}
     </div>
   );
 
@@ -71,28 +110,28 @@ export default function AdminDashboard() {
       }}>
         <SummaryCard 
           title="Today's Orders" 
-          value={stats.todayOrdersCount} 
+          value={stats?.todayOrdersCount || 0} 
           icon={<ShoppingCart size={24} />} 
           color="#3b82f6"
           subtitle="Orders created today"
         />
         <SummaryCard 
           title="Pending Bills" 
-          value={stats.pendingInvoicesCount || 0} 
+          value={stats?.pendingInvoicesCount || 0} 
           icon={<Receipt size={24} />} 
           color="#f59e0b"
           subtitle="Awaiting payment"
         />
         <SummaryCard 
           title="Total Customers" 
-          value={stats.customersCount} 
+          value={stats?.customersCount || 0} 
           icon={<Users size={24} />} 
           color="#8b5cf6"
           subtitle="Loyal base"
         />
         <SummaryCard 
           title="Monthly Revenue" 
-          value={formatCurrency(stats.revenue)} 
+          value={formatCurrency(stats?.revenue || 0)} 
           icon={<DollarSign size={24} />} 
           color="#10b981"
           subtitle="Target: $25k"
@@ -138,7 +177,7 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {stats.recentOrders.map((order: any) => (
+              {(stats?.recentOrders || []).map((order: any) => (
                 <tr key={order.id} className="table-row">
                   <td style={{ padding: '1.25rem', fontWeight: '600', color: '#C9A84C' }}>{formatOrderId(order.id)}</td>
                   <td style={{ padding: '1.25rem' }}>{order.customer.name}</td>

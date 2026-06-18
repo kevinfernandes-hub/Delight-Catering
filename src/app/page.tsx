@@ -156,7 +156,39 @@ function StatCounter({ stat, index }: { stat: { target: number; suffix: string; 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [dbAssets, setDbAssets] = useState<Record<string, string>>({});
+  const [dbGallery, setDbGallery] = useState<{ img: string; title: string }[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      try {
+        const [assetsRes, galleryRes] = await Promise.all([
+          fetch('/api/admin/assets'),
+          fetch('/api/admin/gallery')
+        ]);
+        if (assetsRes.ok) {
+          const assetsData = await assetsRes.json();
+          const assetMap: Record<string, string> = {};
+          assetsData.forEach((asset: any) => {
+            if (asset.url) {
+              assetMap[asset.key] = asset.url;
+            }
+          });
+          setDbAssets(assetMap);
+        }
+        if (galleryRes.ok) {
+          const galleryData = await galleryRes.json();
+          if (galleryData.length > 0) {
+            setDbGallery(galleryData.map((img: any) => ({ img: img.url, title: img.title })));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch dynamic images:', err);
+      }
+    };
+    fetchImages();
+  }, []);
   const cursorRef = useRef<HTMLDivElement>(null);
   const followerRef = useRef<HTMLDivElement>(null);
   const animatedLineRef = useRef<SVGLineElement>(null);
@@ -293,6 +325,7 @@ export default function Home() {
         <div className="logo">Delight</div>
         <div className="nav-links">
           <a href="#about" className="hover-target">Our Story</a>
+           <a href="/menu" className="hover-target">Menu Packages</a>
           <a href="#menu" className="hover-target">Signature Menu</a>
           <a href="#how-it-works" className="hover-target">Experience</a>
           <a href="#gallery" className="hover-target">Gallery</a>
@@ -302,7 +335,10 @@ export default function Home() {
       </nav>
 
       <section id="hero">
-        <div id="hero-bg"></div>
+        <div 
+          id="hero-bg"
+          style={dbAssets.hero_bg ? { backgroundImage: `url(${dbAssets.hero_bg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.3)' } : {}}
+        ></div>
         <canvas id="particles-canvas" ref={canvasRef}></canvas>
         <div className="hero-content">
           <h1 className="hero-headline">
@@ -336,7 +372,7 @@ export default function Home() {
       <section id="about">
         <div className="container about-split">
           <div className="about-image reveal reveal-left">
-            <img src="https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000" alt="Exquisite plating" />
+            <img src={dbAssets.about_plating || "https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000"} alt="Exquisite plating" />
           </div>
           <div className="about-content reveal reveal-right">
             <span className="section-tag">Our Story</span>
@@ -360,21 +396,21 @@ export default function Home() {
           <div className="menu-grid">
             <MenuCard 
               delay="0.1s"
-              image="https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800"
+              image={dbAssets.package_snacks || "https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800"}
               category="Snacks & Starters"
               title="Non-Veg Delights"
               description="A tantalizing selection of premium non-veg snacks."
             />
             <MenuCard 
               delay="0.3s"
-              image="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800"
+              image={dbAssets.package_biryani || "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800"}
               category="Main Course"
               title="Signature Chicken Biryani"
               description="Our most praised dish slow-cooked to perfection."
             />
             <MenuCard 
               delay="0.5s"
-              image="https://images.unsplash.com/photo-1621841957884-1210fe19b66d?auto=format&fit=crop&q=80&w=800"
+              image={dbAssets.package_buffet || "https://images.unsplash.com/photo-1621841957884-1210fe19b66d?auto=format&fit=crop&q=80&w=800"}
               category="Buffet Service"
               title="Indian & Chinese Flavors"
               description="A grand buffet spread of North Indian and Chinese delicacies."
@@ -431,7 +467,7 @@ export default function Home() {
             <h2>Our Work in Action.</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginTop: '3rem' }}>
-            {galleryImages.map((item, i) => (
+            {(dbGallery.length > 0 ? dbGallery : galleryImages).map((item, i) => (
               <div key={i} style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px', aspectRatio: '1', cursor: 'pointer' }} className="hover-target">
                 <img 
                   src={item.img} 
@@ -485,12 +521,12 @@ export default function Home() {
 
       <section id="gallery">
         <div className="gallery-container">
-          {[
+          {(dbGallery.length > 0 ? dbGallery.slice(0, 4) : [
             { img: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800', title: 'Impeccable Settings' },
             { img: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&q=80&w=800', title: 'Artful Plating' },
             { img: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&q=80&w=800', title: 'Ambient Experiences' },
             { img: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?auto=format&fit=crop&q=80&w=800', title: 'Culinary Mastery' },
-          ].map((item, i) => (
+          ]).map((item, i) => (
             <div key={i} className="gallery-item hover-target">
               <img src={item.img} alt={item.title} />
               <div className="gallery-caption"><h4>{item.title}</h4></div>
