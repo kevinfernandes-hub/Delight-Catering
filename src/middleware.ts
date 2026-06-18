@@ -41,6 +41,18 @@ export async function middleware(request: NextRequest) {
 
   // Protect /api routes (except public ones)
   if (request.nextUrl.pathname.startsWith('/api')) {
+    // Allow public GET requests for menu, packages, assets, and gallery images
+    const isPublicGet = request.method === 'GET' && [
+      '/api/menu',
+      '/api/packages',
+      '/api/admin/assets',
+      '/api/admin/gallery'
+    ].includes(request.nextUrl.pathname);
+
+    if (isPublicGet) {
+      return NextResponse.next();
+    }
+
     const token = request.headers.get('authorization')?.replace('Bearer ', '') || request.cookies.get('admin_token')?.value;
     
     if (!token) {
