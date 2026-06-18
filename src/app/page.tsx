@@ -164,8 +164,8 @@ export default function Home() {
     const fetchImages = async () => {
       try {
         const [assetsRes, galleryRes] = await Promise.all([
-          fetch('/api/admin/assets'),
-          fetch('/api/admin/gallery')
+          fetch('/api/admin/assets', { cache: 'no-store' }),
+          fetch('/api/admin/gallery', { cache: 'no-store' })
         ]);
         if (assetsRes.ok) {
           const assetsData = await assetsRes.json();

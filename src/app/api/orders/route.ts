@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 const ACTIVE_EVENT_STATUSES = ['Confirmed', 'In-Progress'];
 
 function dayRange(value: Date) {
