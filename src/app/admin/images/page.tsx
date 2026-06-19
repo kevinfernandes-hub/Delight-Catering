@@ -325,12 +325,18 @@ export default function AdminImages() {
         setVideoFileWarning(null);
         fetchData();
       } else {
-        const errorData = await res.json();
-        showToast(errorData.error || 'Failed to add video', 'error');
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await res.json();
+          showToast(errorData.error || 'Failed to add video', 'error');
+        } else {
+          const errorText = await res.text();
+          showToast(`Server error (${res.status}): ${errorText.substring(0, 50)}...`, 'error');
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Error adding video', 'error');
+      showToast(`Error adding video: ${err.message || err}`, 'error');
     } finally {
       setVideoUploading(false);
     }
