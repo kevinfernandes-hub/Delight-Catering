@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import GoogleReviewsCarousel from '@/components/home/GoogleReviewsCarousel';
 import { CardContainer, CardBody, CardItem } from '@/components/ui/3d-card';
 import { galleryImages } from '@/lib/galleryConfig';
+import ChefAnimation from '@/components/home/ChefAnimation';
 
 // Particle class moved outside component to fix lint
 class Particle {
@@ -328,7 +329,7 @@ export default function Home() {
            <a href="/menu" className="hover-target">Menu Packages</a>
           <a href="#menu" className="hover-target">Signature Menu</a>
           <a href="#how-it-works" className="hover-target">Experience</a>
-          <a href="#gallery" className="hover-target">Gallery</a>
+          <a href="/gallery" className="hover-target">Gallery</a>
           <a href="/admin/login" className="hover-target" style={{ color: 'var(--color-gold)' }}>Admin</a>
         </div>
         <a href="#cta" className="nav-cta hover-target">Book Now</a>
@@ -383,6 +384,24 @@ export default function Home() {
               <div className="stat"><h3>4.8/5</h3><p>Star Rating</p></div>
               <div className="stat"><h3>1000+</h3><p>Capacity Scalability</p></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="culinary-art" style={{ backgroundColor: 'var(--color-surface)', borderTop: '1px solid rgba(201, 168, 76, 0.15)', borderBottom: '1px solid rgba(201, 168, 76, 0.15)' }}>
+        <div className="container culinary-split">
+          <div className="reveal reveal-left" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <ChefAnimation />
+          </div>
+          <div className="reveal reveal-right" style={{ flex: 1 }}>
+            <span className="section-tag">Behind The Scenes</span>
+            <h2 style={{ fontSize: 'clamp(2.5rem, 4vw, 4rem)', marginBottom: '2rem', fontStyle: 'italic' }}>The Culinary Theatre.</h2>
+            <p style={{ marginBottom: '1.5rem', fontSize: '1.125rem', lineHeight: '1.7' }}>
+              Every event is a sensory performance. Watch our master chefs blend Nagpur&apos;s rich aromatic spices with innovative, high-flame cooking techniques.
+            </p>
+            <p style={{ fontSize: '1.125rem', lineHeight: '1.7' }}>
+              From slow-simmering signature biryanis to rapid wok-tossed snacks, our kitchen is a theatre of passion, precision, and hygiene—transforming premium ingredients into mouthwatering catering memories.
+            </p>
           </div>
         </div>
       </section>
@@ -752,7 +771,7 @@ export default function Home() {
             <div className="footer-nav">
               <a href="#about">Our Story</a>
               <a href="#menu">Menu</a>
-              <a href="#gallery">Gallery</a>
+              <a href="/gallery">Gallery</a>
               <a href="/admin">Admin Login</a>
             </div>
             <div className="social-icons">

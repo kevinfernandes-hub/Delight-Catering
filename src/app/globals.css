@@ -1125,9 +1125,36 @@ footer {
   margin-top: 3rem;
 }
 
+/* Culinary Split */
+.culinary-split {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+}
+
+/* Gallery Page Specific Styles */
+.gallery-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.gallery-page-card:hover img {
+  transform: scale(1.08);
+}
+
+.gallery-page-card:hover .gallery-card-overlay {
+  opacity: 1 !important;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
   .about-split {
+    flex-direction: column;
+    gap: 2.5rem;
+  }
+  .culinary-split {
     flex-direction: column;
     gap: 2.5rem;
   }
@@ -1149,6 +1176,12 @@ footer {
   /* Showcase Grid mobile overrides */
   .showcase-grid {
     grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 1.5rem;
+  }
+
+  /* Gallery Grid mobile overrides */
+  .gallery-page-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 1.5rem;
   }
 
