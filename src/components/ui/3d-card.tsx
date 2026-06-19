@@ -134,10 +134,15 @@ export const CardItem = ({
     }
   };
 
+  const hasWidth = className && /\bw-/.test(className);
   return (
     <Tag
       ref={ref}
-      className={cn("w-fit transition duration-200 ease-linear", className)}
+      className={cn(
+        "transition duration-200 ease-linear",
+        !hasWidth && "w-fit",
+        className
+      )}
       {...rest}
     >
       {children}

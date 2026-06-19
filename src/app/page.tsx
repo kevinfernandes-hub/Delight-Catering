@@ -61,7 +61,7 @@ function MenuCard({
 }) {
   return (
     <CardContainer 
-      containerClassName="!py-0"
+      containerClassName="w-full !py-0"
       className="w-full h-80 reveal" 
     >
       <CardBody className="!w-full !h-full bg-gray-900 border border-white/[0.2] rounded-xl overflow-hidden relative">
@@ -466,7 +466,7 @@ export default function Home() {
             <span className="section-tag">Gallery Highlights</span>
             <h2>Our Work in Action.</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginTop: '3rem' }}>
+          <div className="showcase-grid">
             {(dbGallery.length > 0 ? dbGallery : galleryImages).map((item, i) => (
               <div key={i} style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px', aspectRatio: '1', cursor: 'pointer' }} className="hover-target">
                 <img 
