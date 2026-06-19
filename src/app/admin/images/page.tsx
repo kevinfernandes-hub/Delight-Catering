@@ -258,12 +258,12 @@ export default function AdminImages() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit: 15MB
-    const maxSizeBytes = 15 * 1024 * 1024;
+    // Check size limit: 400MB
+    const maxSizeBytes = 400 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      setVideoFileWarning('File size exceeds 15MB. Larger videos will take a long time to load and may fail to save. Consider using a YouTube link or CDN URL instead.');
-      if (file.size > 20 * 1024 * 1024) {
-        showToast('File is too large (exceeds 20MB limit for database storage)', 'error');
+      setVideoFileWarning('File size exceeds 400MB. Larger videos will take a long time to load and may fail to save. Consider using a YouTube link or CDN URL instead.');
+      if (file.size > 500 * 1024 * 1024) {
+        showToast('File is too large (exceeds 500MB limit for database storage)', 'error');
         return;
       }
     } else {
