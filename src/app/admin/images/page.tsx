@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/app/components/admin/Toast';
-import { Upload, Trash2, Save, Image as ImageIcon, Plus, Check } from 'lucide-react';
+import { Upload, Trash2, Save, Image as ImageIcon, Plus, Check, Video } from 'lucide-react';
 
 interface ImageAsset {
   id: string;
@@ -12,6 +12,13 @@ interface ImageAsset {
 }
 
 interface GalleryImage {
+  id: string;
+  url: string;
+  title: string;
+  created_at: string;
+}
+
+interface GalleryVideo {
   id: string;
   url: string;
   title: string;
@@ -75,9 +82,10 @@ const compressImage = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 
 
 export default function AdminImages() {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'sections' | 'gallery'>('sections');
+  const [activeTab, setActiveTab] = useState<'sections' | 'gallery' | 'videos'>('sections');
   const [assets, setAssets] = useState<ImageAsset[]>([]);
   const [gallery, setGallery] = useState<GalleryImage[]>([]);
+  const [videos, setVideos] = useState<GalleryVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
@@ -86,6 +94,13 @@ export default function AdminImages() {
   const [newGalleryUrl, setNewGalleryUrl] = useState('');
   const [galleryUploading, setGalleryUploading] = useState(false);
 
+  // Videos form state
+  const [newVideoTitle, setNewVideoTitle] = useState('');
+  const [newVideoUrl, setNewVideoUrl] = useState('');
+  const [videoUploadType, setVideoUploadType] = useState<'upload' | 'url'>('upload');
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoFileWarning, setVideoFileWarning] = useState<string | null>(null);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -93,22 +108,25 @@ export default function AdminImages() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [assetsRes, galleryRes] = await Promise.all([
+      const [assetsRes, galleryRes, videosRes] = await Promise.all([
         fetch('/api/admin/assets'),
-        fetch('/api/admin/gallery')
+        fetch('/api/admin/gallery'),
+        fetch('/api/admin/videos')
       ]);
 
-      if (assetsRes.ok && galleryRes.ok) {
+      if (assetsRes.ok && galleryRes.ok && videosRes.ok) {
         const assetsData = await assetsRes.json();
         const galleryData = await galleryRes.json();
+        const videosData = await videosRes.json();
         setAssets(assetsData);
         setGallery(galleryData);
+        setVideos(videosData);
       } else {
-        showToast('Failed to load image configurations', 'error');
+        showToast('Failed to load image & video configurations', 'error');
       }
     } catch (err) {
       console.error(err);
-      showToast('An error occurred while fetching image data', 'error');
+      showToast('An error occurred while fetching media data', 'error');
     } finally {
       setLoading(false);
     }
@@ -236,6 +254,108 @@ export default function AdminImages() {
     }
   };
 
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check size limit: 15MB
+    const maxSizeBytes = 15 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      setVideoFileWarning('File size exceeds 15MB. Larger videos will take a long time to load and may fail to save. Consider using a YouTube link or CDN URL instead.');
+      if (file.size > 20 * 1024 * 1024) {
+        showToast('File is too large (exceeds 20MB limit for database storage)', 'error');
+        return;
+      }
+    } else {
+      setVideoFileWarning(null);
+    }
+
+    setVideoUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Url = event.target?.result as string;
+        setNewVideoUrl(base64Url);
+        showToast('Video processed successfully. Enter a title and click "Add Video" to save.', 'success');
+        setVideoUploading(false);
+      };
+      reader.onerror = () => {
+        showToast('Failed to read video file', 'error');
+        setVideoUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      showToast('Error uploading video', 'error');
+      setVideoUploading(false);
+    }
+  };
+
+  const handleAddVideo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVideoUrl || !newVideoTitle) {
+      showToast('Please provide both a video source and a title', 'error');
+      return;
+    }
+
+    let url = newVideoUrl;
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      const watchRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?\s]+)/;
+      const match = url.match(watchRegex);
+      if (match && match[1]) {
+        url = `https://www.youtube.com/embed/${match[1]}`;
+      }
+    }
+
+    setVideoUploading(true);
+    try {
+      const res = await fetch('/api/admin/videos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          title: newVideoTitle
+        })
+      });
+
+      if (res.ok) {
+        showToast('Video added successfully', 'success');
+        setNewVideoTitle('');
+        setNewVideoUrl('');
+        setVideoFileWarning(null);
+        fetchData();
+      } else {
+        const errorData = await res.json();
+        showToast(errorData.error || 'Failed to add video', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error adding video', 'error');
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  const handleDeleteVideo = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this video from the gallery?')) return;
+
+    try {
+      const res = await fetch(`/api/admin/videos?id=${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        showToast('Video removed successfully', 'success');
+        fetchData();
+      } else {
+        showToast('Failed to delete video', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error deleting video', 'error');
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#C9A84C' }}>
@@ -308,6 +428,22 @@ export default function AdminImages() {
           }}
         >
           Gallery Section
+        </button>
+        <button
+          onClick={() => setActiveTab('videos')}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'videos' ? '2px solid #C9A84C' : '2px solid transparent',
+            color: activeTab === 'videos' ? '#C9A84C' : '#A3A3A3',
+            fontSize: '1rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: '0.3s'
+          }}
+        >
+          Video Gallery
         </button>
       </div>
 
@@ -609,6 +745,265 @@ export default function AdminImages() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'videos' && (
+        <div>
+          {/* Add to Video Gallery Form */}
+          <div
+            style={{
+              backgroundColor: '#111',
+              border: '1px solid rgba(201, 168, 76, 0.1)',
+              borderRadius: '8px',
+              padding: '2rem',
+              marginBottom: '3rem'
+            }}
+          >
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#C9A84C', marginBottom: '1.5rem', fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>
+              Add Video to Gallery
+            </h3>
+
+            {/* Video Source Tabs */}
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setVideoUploadType('upload');
+                  setNewVideoUrl('');
+                  setVideoFileWarning(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: videoUploadType === 'upload' ? '#C9A84C' : '#A3A3A3',
+                  borderBottom: videoUploadType === 'upload' ? '2px solid #C9A84C' : '2px solid transparent',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  padding: '0.25rem 0.5rem',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Upload Video File (MP4)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVideoUploadType('url');
+                  setNewVideoUrl('');
+                  setVideoFileWarning(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: videoUploadType === 'url' ? '#C9A84C' : '#A3A3A3',
+                  borderBottom: videoUploadType === 'url' ? '2px solid #C9A84C' : '2px solid transparent',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  padding: '0.25rem 0.5rem',
+                  fontSize: '0.9rem'
+                }}
+              >
+                External URL (YouTube / Direct MP4 Link)
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddVideo} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', alignItems: 'end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: '#A3A3A3', marginBottom: '0.5rem' }}>Video Title</label>
+                <input
+                  type="text"
+                  value={newVideoTitle}
+                  onChange={e => setNewVideoTitle(e.target.value)}
+                  placeholder="e.g. Fine dining plating experience"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#050505',
+                    border: '1px solid rgba(201, 168, 76, 0.2)',
+                    borderRadius: '4px',
+                    color: '#F5F0E8',
+                    fontSize: '0.9rem'
+                  }}
+                />
+              </div>
+
+              {videoUploadType === 'url' ? (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#A3A3A3', marginBottom: '0.5rem' }}>Video URL</label>
+                  <input
+                    type="text"
+                    value={newVideoUrl}
+                    onChange={e => setNewVideoUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=... or direct .mp4 link"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#050505',
+                      border: '1px solid rgba(201, 168, 76, 0.2)',
+                      borderRadius: '4px',
+                      color: '#F5F0E8',
+                      fontSize: '0.9rem'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#A3A3A3', marginBottom: '0.5rem' }}>Select Video File (MP4)</label>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem',
+                      backgroundColor: '#050505',
+                      color: newVideoUrl ? '#C9A84C' : '#A3A3A3',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      border: '1px solid rgba(201, 168, 76, 0.2)',
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <Upload size={16} />
+                    {newVideoUrl ? 'Video Loaded (Ready to Add)' : 'Upload MP4 File'}
+                    <input
+                      type="file"
+                      accept="video/mp4"
+                      onChange={handleVideoUpload}
+                      style={{ display: 'none' }}
+                      disabled={videoUploading}
+                    />
+                  </label>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  type="submit"
+                  disabled={videoUploading || !newVideoUrl}
+                  style={{
+                    flex: 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem',
+                    backgroundColor: (videoUploading || !newVideoUrl) ? '#333' : '#C9A84C',
+                    color: (videoUploading || !newVideoUrl) ? '#888' : '#000',
+                    borderRadius: '4px',
+                    cursor: (videoUploading || !newVideoUrl) ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 'bold',
+                    border: 'none',
+                    transition: '0.3s'
+                  }}
+                >
+                  {videoUploading ? 'Processing...' : <><Plus size={16} /> Add Video</>}
+                </button>
+              </div>
+            </form>
+
+            {videoFileWarning && (
+              <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(201, 168, 76, 0.1)', border: '1px solid rgba(201, 168, 76, 0.3)', borderRadius: '4px', color: '#C9A84C', fontSize: '0.85rem' }}>
+                {videoFileWarning}
+              </div>
+            )}
+          </div>
+
+          {/* Videos Grid */}
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#F5F0E8', marginBottom: '1.5rem', fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>
+            Current Gallery Videos ({videos.length})
+          </h3>
+          
+          {videos.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', color: '#A3A3A3' }}>
+              <Video size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+              <p>No gallery videos uploaded yet. Use the form above to add some!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+              {videos.map(item => {
+                const isYoutube = item.url.includes('youtube.com') || item.url.includes('youtu.be');
+                let displayUrl = item.url;
+                if (isYoutube) {
+                  const watchRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?\s]+)/;
+                  const match = item.url.match(watchRegex);
+                  if (match && match[1]) {
+                    displayUrl = `https://www.youtube.com/embed/${match[1]}?autoplay=0&mute=1&controls=1`;
+                  } else if (!item.url.includes('autoplay=')) {
+                    displayUrl = `${item.url}?autoplay=0&mute=1&controls=1`;
+                  }
+                }
+                
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      backgroundColor: '#111',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
+                    <div style={{ height: '180px', backgroundColor: '#050505', position: 'relative' }}>
+                      {isYoutube ? (
+                        <iframe
+                          src={displayUrl}
+                          title={item.title}
+                          frameBorder="0"
+                          style={{ width: '100%', height: '100%', display: 'block' }}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <video
+                          src={item.url}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          controls
+                          muted
+                          preload="metadata"
+                        />
+                      )}
+                    </div>
+                    <div style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flex: 1 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 'bold', color: '#F5F0E8', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                          {item.title}
+                        </h4>
+                        <span style={{ fontSize: '0.8rem', color: '#A3A3A3' }}>
+                          {isYoutube ? 'YouTube Embed' : item.url.startsWith('data:') ? 'Uploaded File (Base64)' : 'External Direct URL'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteVideo(item.id)}
+                        style={{
+                          padding: '0.5rem',
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          color: '#ef4444',
+                          border: '1px solid rgba(239, 68, 68, 0.2)',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          transition: '0.3s'
+                        }}
+                        title="Delete Video"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

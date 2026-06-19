@@ -46,7 +46,8 @@ export async function middleware(request: NextRequest) {
       '/api/menu',
       '/api/packages',
       '/api/admin/assets',
-      '/api/admin/gallery'
+      '/api/admin/gallery',
+      '/api/admin/videos'
     ].includes(request.nextUrl.pathname);
 
     if (isPublicGet) {

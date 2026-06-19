@@ -144,3 +144,11 @@ model GalleryImage {
   created_at DateTime @default(now())
 }
 
+model GalleryVideo {
+  id         String   @id @default(cuid())
+  url        String
+  title      String
+  created_at DateTime @default(now())
+}
+
+

@@ -5,6 +5,7 @@ import GoogleReviewsCarousel from '@/components/home/GoogleReviewsCarousel';
 import { CardContainer, CardBody, CardItem } from '@/components/ui/3d-card';
 import { galleryImages } from '@/lib/galleryConfig';
 import ChefAnimation from '@/components/home/ChefAnimation';
+import { Play, X } from 'lucide-react';
 
 // Particle class moved outside component to fix lint
 class Particle {
@@ -158,14 +159,17 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [dbAssets, setDbAssets] = useState<Record<string, string>>({});
   const [dbGallery, setDbGallery] = useState<{ img: string; title: string }[]>([]);
+  const [dbVideos, setDbVideos] = useState<{ id: string; url: string; title: string }[]>([]);
+  const [activeLightboxVideo, setActiveLightboxVideo] = useState<{ id: string; url: string; title: string } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const fetchImages = async () => {
+    const fetchMedia = async () => {
       try {
-        const [assetsRes, galleryRes] = await Promise.all([
+        const [assetsRes, galleryRes, videosRes] = await Promise.all([
           fetch('/api/admin/assets', { cache: 'no-store' }),
-          fetch('/api/admin/gallery', { cache: 'no-store' })
+          fetch('/api/admin/gallery', { cache: 'no-store' }),
+          fetch('/api/admin/videos', { cache: 'no-store' })
         ]);
         if (assetsRes.ok) {
           const assetsData = await assetsRes.json();
@@ -183,11 +187,15 @@ export default function Home() {
             setDbGallery(galleryData.map((img: any) => ({ img: img.url, title: img.title })));
           }
         }
+        if (videosRes.ok) {
+          const videosData = await videosRes.json();
+          setDbVideos(videosData);
+        }
       } catch (err) {
-        console.error('Failed to fetch dynamic images:', err);
+        console.error('Failed to fetch dynamic media:', err);
       }
     };
-    fetchImages();
+    fetchMedia();
   }, []);
   const cursorRef = useRef<HTMLDivElement>(null);
   const followerRef = useRef<HTMLDivElement>(null);
@@ -339,6 +347,7 @@ export default function Home() {
           id="hero-bg"
           style={dbAssets.hero_bg ? { backgroundImage: `url(${dbAssets.hero_bg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.3)' } : {}}
         ></div>
+        <div className="hero-vignette"></div>
         <canvas id="particles-canvas" ref={canvasRef}></canvas>
         <div className="hero-content">
           <h1 className="hero-headline">
@@ -353,7 +362,7 @@ export default function Home() {
           </h1>
           <p className="hero-subtext">Quality food & best catering services in Nagpur. Premium catering for weddings, corporate events & exclusive celebrations.</p>
           <div className="hero-ctas">
-            <a href="#menu" className="btn btn-gold hover-target">Explore Menu</a>
+            <a href="#menu" className="btn btn-gold btn-shimmer hover-target">Explore Menu</a>
             <a href="#cta" className="btn btn-ghost hover-target">Request a Quote</a>
           </div>
         </div>
@@ -554,46 +563,37 @@ export default function Home() {
       </section>
 
       {/* Pricing Section */}
-      <section style={{ padding: '5rem 0' }}>
+      <section style={{ padding: '7rem 0', position: 'relative' }}>
         <div className="container reveal">
           <div className="section-header reveal">
             <span className="section-tag">Packages</span>
             <h2>Transparent Pricing.</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginTop: '3rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2.5rem', marginTop: '4rem' }}>
             {[
               { name: 'Starter', price: '₹299', perHead: 'per head', items: ['Up to 50 guests', 'Vegetarian menu', 'Basic setup', 'Standard service'] },
               { name: 'Classic', price: '₹599', perHead: 'per head', items: ['Up to 200 guests', 'Veg & Non-Veg', 'Premium setup', 'Professional staff', 'Beverages included'], featured: true },
               { name: 'Premium', price: '₹899', perHead: 'per head', items: ['Unlimited guests', 'Customized menu', 'Luxury setup', 'Senior chef', 'Beverages & desserts', 'Decoration'] }
             ].map((pkg, i) => (
-              <div key={i} style={{
-                padding: '2.5rem',
-                borderRadius: '4px',
-                backgroundColor: pkg.featured ? 'var(--color-gold)' : 'rgba(255,255,255,0.08)',
-                border: pkg.featured ? 'none' : '2px solid var(--color-gold)',
-                transform: pkg.featured ? 'scale(1.05)' : 'scale(1)',
-                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                cursor: 'pointer'
-              }} className="hover-target"
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.transform = pkg.featured ? 'scale(1.08)' : 'scale(1.02)';
-                el.style.boxShadow = '0 10px 30px rgba(201, 168, 76, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.transform = pkg.featured ? 'scale(1.05)' : 'scale(1)';
-                el.style.boxShadow = 'none';
-              }}>
-                <h3 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', color: pkg.featured ? '#0a0a0a' : 'var(--color-gold)', fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>{pkg.name}</h3>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.25rem', color: pkg.featured ? '#0a0a0a' : 'var(--color-gold)', fontFamily: 'var(--font-display)' }}>{pkg.price}</div>
-                <p style={{ fontSize: '0.9rem', marginBottom: '2rem', color: pkg.featured ? 'rgba(10,10,10,0.8)' : 'var(--color-text-muted)' }}>{pkg.perHead}</p>
-                <ul style={{ listStyle: 'none', padding: 0, marginBottom: '2rem' }}>
-                  {pkg.items.map((item, j) => (
-                    <li key={j} style={{ padding: '0.5rem 0', borderBottom: '1px solid ' + (pkg.featured ? 'rgba(10,10,10,0.2)' : 'var(--color-gold)'), color: pkg.featured ? '#0a0a0a' : 'var(--color-text)', fontSize: '0.95rem' }}>✓ {item}</li>
-                  ))}
-                </ul>
-                <button className="btn btn-gold hover-target" style={{ width: '100%', padding: '0.8rem', background: pkg.featured ? 'white' : 'var(--color-gold)', color: pkg.featured ? 'var(--color-gold)' : 'white', border: 'none', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold', fontSize: '1rem' }}>Get Quote</button>
+              <div key={i} className={`pricing-card ${pkg.featured ? 'featured' : ''}`}>
+                {pkg.featured && (
+                  <div className="featured-badge">
+                    <span>★ MOST POPULAR</span>
+                  </div>
+                )}
+                <div>
+                  <h3>{pkg.name}</h3>
+                  <div className="pricing-card-price">{pkg.price}</div>
+                  <p className="pricing-card-period">{pkg.perHead}</p>
+                  <ul className="pricing-card-items">
+                    {pkg.items.map((item, j) => (
+                      <li key={j}>
+                        <span className="check">✓</span> {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <button className="btn btn-gold btn-shimmer hover-target" style={{ width: '100%', padding: '0.8rem', background: pkg.featured ? 'var(--color-gold)' : 'transparent', border: '1px solid var(--color-gold)', color: pkg.featured ? 'var(--color-bg)' : 'var(--color-gold)', cursor: 'pointer', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem' }}>Get Quote</button>
               </div>
             ))}
           </div>
@@ -601,29 +601,288 @@ export default function Home() {
       </section>
 
       {/* Video Section */}
-      <section style={{ padding: '5rem 0', backgroundColor: '#0a0a0a' }}>
+      <section style={{ padding: '7rem 0', backgroundColor: '#0a0a0a', borderTop: '1px solid rgba(201, 168, 76, 0.1)', borderBottom: '1px solid rgba(201, 168, 76, 0.1)' }}>
         <div className="container reveal">
           <div className="section-header reveal">
             <span className="section-tag">Behind the Scenes</span>
             <h2>See Us in Action.</h2>
           </div>
-          <div style={{ marginTop: '3rem', borderRadius: '4px', overflow: 'hidden', aspectRatio: '16/9', boxShadow: '0 10px 40px rgba(201, 168, 76, 0.1)' }}>
-            <iframe 
-              width="100%" 
-              height="100%" 
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
-              title="Delight Caterers - Behind the Scenes"
-              frameBorder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowFullScreen
-              style={{ borderRadius: '4px' }}>
-            </iframe>
+          
+          <style>{`
+            .video-gallery-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+              gap: 2.5rem;
+              margin-top: 3.5rem;
+            }
+            .video-gallery-card {
+              position: relative;
+              aspect-ratio: 16/9;
+              border-radius: 12px;
+              overflow: hidden;
+              border: 1px solid rgba(201, 168, 76, 0.15);
+              background: #050505;
+              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+              cursor: pointer;
+              transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .video-gallery-card:hover {
+              transform: translateY(-8px);
+              border-color: rgba(201, 168, 76, 0.5);
+              box-shadow: 0 20px 45px rgba(201, 168, 76, 0.2);
+            }
+            .video-card-overlay {
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
+              z-index: 2;
+              transition: all 0.3s ease;
+            }
+            .video-gallery-card:hover .video-card-overlay {
+              background: rgba(0, 0, 0, 0.4);
+            }
+            .video-play-btn {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) scale(0.8);
+              width: 56px;
+              height: 56px;
+              border-radius: 50%;
+              background: rgba(201, 168, 76, 0.95);
+              color: #000;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 3;
+              opacity: 0;
+              transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+              box-shadow: 0 0 15px rgba(201, 168, 76, 0.5);
+            }
+            .video-gallery-card:hover .video-play-btn {
+              opacity: 1;
+              transform: translate(-50%, -50%) scale(1);
+            }
+            .video-card-title-bar {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              padding: 1.25rem;
+              z-index: 3;
+            }
+            .video-card-title {
+              margin: 0;
+              font-size: 1.1rem;
+              font-weight: 600;
+              color: #F5F0E8;
+              font-family: var(--font-display);
+            }
+            .video-card-badge {
+              font-size: 0.75rem;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              color: var(--color-gold);
+              margin-bottom: 0.25rem;
+              display: block;
+            }
+            .video-lightbox-overlay {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(0, 0, 0, 0.95);
+              backdrop-filter: blur(12px);
+              -webkit-backdrop-filter: blur(12px);
+              z-index: 9999;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 2rem;
+              animation: fadeIn 0.3s ease-out;
+            }
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            .video-lightbox-container {
+              width: 100%;
+              max-width: 1024px;
+              position: relative;
+              animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            @keyframes scaleIn {
+              from { transform: scale(0.9); opacity: 0; }
+              to { transform: scale(1); opacity: 1; }
+            }
+            .video-lightbox-close {
+              position: absolute;
+              top: -3.5rem;
+              right: 0;
+              background: none;
+              border: none;
+              color: #fff;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 0.5rem;
+              transition: color 0.3s;
+            }
+            .video-lightbox-close:hover {
+              color: var(--color-gold);
+            }
+            .video-lightbox-media {
+              aspect-ratio: 16/9;
+              width: 100%;
+              border-radius: 12px;
+              overflow: hidden;
+              border: 1px solid rgba(201, 168, 76, 0.3);
+              box-shadow: 0 25px 50px rgba(0,0,0,0.8), 0 0 50px rgba(201,168,76,0.15);
+              background: #000;
+            }
+            .video-lightbox-title {
+              margin-top: 1.5rem;
+              font-size: 1.5rem;
+              color: #F5F0E8;
+              text-align: center;
+              font-family: var(--font-display);
+              font-style: italic;
+            }
+          `}</style>
+
+          <div className="video-gallery-grid">
+            {(dbVideos.length > 0 ? dbVideos : [
+              { id: 'default-1', url: 'https://www.youtube.com/embed/zpqh9c-D1sQ', title: 'Delight Caterers - Behind the Scenes' }
+            ]).map((video) => {
+              const isYoutube = video.url.includes('youtube.com') || video.url.includes('youtu.be');
+              
+              const getYoutubeLoopUrl = (srcUrl: string) => {
+                const watchRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?\s]+)/;
+                const match = srcUrl.match(watchRegex);
+                let videoId = '';
+                if (match && match[1]) {
+                  videoId = match[1];
+                } else if (srcUrl.includes('youtube.com/embed/')) {
+                  const embedIdRegex = /youtube\.com\/embed\/([^&?\s]+)/;
+                  const embedMatch = srcUrl.match(embedIdRegex);
+                  if (embedMatch && embedMatch[1]) {
+                    videoId = embedMatch[1].split('?')[0];
+                  }
+                }
+                if (videoId) {
+                  return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&rel=0&iv_load_policy=3`;
+                }
+                return srcUrl;
+              };
+
+              return (
+                <div 
+                  key={video.id} 
+                  className="video-gallery-card reveal"
+                  onClick={() => setActiveLightboxVideo(video)}
+                >
+                  {isYoutube ? (
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      src={getYoutubeLoopUrl(video.url)} 
+                      title={video.title}
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                      style={{ border: 'none', width: '100%', height: '100%', pointerEvents: 'none', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <video
+                      src={video.url}
+                      loop
+                      muted
+                      autoPlay
+                      playsInline
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  )}
+                  
+                  <div className="video-card-overlay"></div>
+                  
+                  <div className="video-play-btn">
+                    <Play size={24} fill="#000" style={{ marginLeft: '4px' }} />
+                  </div>
+                  
+                  <div className="video-card-title-bar">
+                    <span className="video-card-badge">Behind The Scenes</span>
+                    <h3 className="video-card-title">{video.title}</h3>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <p style={{ color: 'var(--color-text-muted)', marginTop: '2rem', textAlign: 'center', maxWidth: '600px', margin: '2rem auto 0', lineHeight: '1.6' }}>
-            Watch our team prepare exquisite dishes and create unforgettable catering experiences for your special events.
+
+          <p style={{ color: 'var(--color-text-muted)', marginTop: '3.5rem', textAlign: 'center', maxWidth: '600px', margin: '3.5rem auto 0', lineHeight: '1.7', fontSize: '1.05rem' }}>
+            Watch our culinary team prepare exquisite dishes and orchestrate unforgettable fine-dining events for our guests. Click any video to play with audio.
           </p>
         </div>
       </section>
+
+      {/* Lightbox Modal */}
+      {activeLightboxVideo && (
+        <div className="video-lightbox-overlay" onClick={() => setActiveLightboxVideo(null)}>
+          <div className="video-lightbox-container" onClick={(e) => e.stopPropagation()}>
+            <button className="video-lightbox-close" onClick={() => setActiveLightboxVideo(null)}>
+              <X size={32} />
+            </button>
+            <div className="video-lightbox-media">
+              {(() => {
+                const isYoutube = activeLightboxVideo.url.includes('youtube.com') || activeLightboxVideo.url.includes('youtu.be');
+                if (isYoutube) {
+                  let embedUrl = activeLightboxVideo.url;
+                  const watchRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?\s]+)/;
+                  const match = activeLightboxVideo.url.match(watchRegex);
+                  let videoId = '';
+                  if (match && match[1]) {
+                    videoId = match[1];
+                  } else if (activeLightboxVideo.url.includes('youtube.com/embed/')) {
+                    const embedIdRegex = /youtube\.com\/embed\/([^&?\s]+)/;
+                    const embedMatch = activeLightboxVideo.url.match(embedIdRegex);
+                    if (embedMatch && embedMatch[1]) {
+                      videoId = embedMatch[1].split('?')[0];
+                    }
+                  }
+                  if (videoId) {
+                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=1&rel=0`;
+                  }
+                  return (
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      src={embedUrl}
+                      title={activeLightboxVideo.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      style={{ border: 'none', width: '100%', height: '100%' }}
+                    />
+                  );
+                } else {
+                  return (
+                    <video
+                      src={activeLightboxVideo.url}
+                      controls
+                      autoPlay
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  );
+                }
+              })()}
+            </div>
+            <h4 className="video-lightbox-title">{activeLightboxVideo.title}</h4>
+          </div>
+        </div>
+      )}
 
       {/* Statistics Enhanced Interactive Section */}
       <section style={{ padding: '5rem 0' }}>
