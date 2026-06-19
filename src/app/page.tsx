@@ -62,26 +62,25 @@ function MenuCard({
 }) {
   return (
     <CardContainer 
-      containerClassName="w-full !py-0"
-      className="w-full h-80 reveal" 
+      containerClassName="card-container-outer"
+      className="card-container-inner reveal" 
     >
-      <CardBody className="!w-full !h-full bg-gray-900 border border-white/[0.2] rounded-xl overflow-hidden relative">
-        <CardItem translateZ={100} className="w-full h-full absolute top-0 left-0">
+      <CardBody className="card-body-3d">
+        <CardItem translateZ={100} className="card-item-3d w-full h-full absolute top-0 left-0">
           <img
             src={image}
             alt={title}
-            className="h-full w-full object-cover"
           />
         </CardItem>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/30 z-10"></div>
+        <div className="card-gradient-overlay"></div>
         <CardItem 
           translateZ={50} 
           as="div" 
-          className="absolute bottom-0 left-0 right-0 px-6 py-6 z-20 w-full"
+          className="card-item-3d card-text-container"
         >
-          <span className="text-gold text-sm font-semibold block mb-2">{category}</span>
-          <h3 className="text-white text-2xl font-bold mb-2">{title}</h3>
-          <p className="text-gray-300 text-sm">{description}</p>
+          <span className="text-gold" style={{ fontSize: '0.9rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>{category}</span>
+          <h3 className="text-white" style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem', fontFamily: 'var(--font-display)' }}>{title}</h3>
+          <p className="text-gray-300" style={{ fontSize: '0.95rem', lineHeight: '1.5', color: 'var(--color-text-muted)' }}>{description}</p>
         </CardItem>
       </CardBody>
     </CardContainer>

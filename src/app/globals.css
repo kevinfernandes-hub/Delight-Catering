@@ -1148,8 +1148,95 @@ footer {
   opacity: 1 !important;
 }
 
+/* 3D Card Fallback Styles (Vanilla CSS) */
+.card-container-outer {
+  padding: 1rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.card-container-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.2s ease-out;
+  width: 100%;
+}
+
+.card-body-3d {
+  width: 100%;
+  height: 380px; /* Constrain height to prevent vertical stretching */
+  transform-style: preserve-3d;
+  position: relative;
+  background-color: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.card-body-3d > * {
+  transform-style: preserve-3d;
+}
+
+.card-item-3d {
+  transition: transform 0.2s ease-out;
+}
+
+.card-item-3d.absolute {
+  position: absolute;
+}
+
+.card-item-3d.top-0 {
+  top: 0;
+}
+
+.card-item-3d.left-0 {
+  left: 0;
+}
+
+.card-item-3d.w-full {
+  width: 100%;
+}
+
+.card-item-3d.h-full {
+  height: 100%;
+}
+
+.card-item-3d img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Crops image cleanly, preventing stretching */
+  display: block;
+}
+
+.card-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.4) 60%, rgba(0, 0, 0, 0.2) 100%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.card-text-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2rem 1.5rem 1.5rem;
+  z-index: 20;
+  width: 100%;
+  text-align: left;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
+  .card-body-3d {
+    height: 350px; /* Sightly shorter on medium/mobile screens */
+  }
   .about-split {
     flex-direction: column;
     gap: 2.5rem;
