@@ -18,14 +18,36 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
+    // Check if body is an array for bulk upload
+    if (Array.isArray(body)) {
+      const dataToInsert = body
+        .filter((item: any) => item && item.url)
+        .map((item: any) => ({
+          url: item.url,
+          title: item.title || '',
+        }));
+
+      if (dataToInsert.length === 0) {
+        return NextResponse.json({ error: 'No valid images provided' }, { status: 400 });
+      }
+
+      const result = await prisma.galleryImage.createMany({
+        data: dataToInsert
+      });
+
+      return NextResponse.json({ message: `Successfully added ${result.count} images`, count: result.count }, { status: 201 });
+    }
+
+    // Single upload
     const { url, title } = body;
     
-    if (!url || !title) {
-      return NextResponse.json({ error: 'URL and title are required' }, { status: 400 });
+    if (!url) {
+      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
     const newImage = await prisma.galleryImage.create({
-      data: { url, title }
+      data: { url, title: title || '' }
     });
 
     return NextResponse.json(newImage, { status: 201 });

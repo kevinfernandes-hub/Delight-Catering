@@ -517,29 +517,7 @@ export default function Home() {
                     img.style.transform = 'scale(1)';
                   }}
                 />
-                <div style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
-                  padding: '2rem 1.5rem 1.5rem',
-                  color: 'white',
-                  transform: 'translateY(20px)',
-                  transition: 'transform 0.4s ease',
-                  zIndex: 10
-                }}
-                onMouseEnter={(e) => {
-                  const div = e.currentTarget;
-                  div.style.transform = 'translateY(0)';
-                }}
-                onMouseLeave={(e) => {
-                  const div = e.currentTarget;
-                  div.style.transform = 'translateY(20px)';
-                }}
-                >
-                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>{item.title}</h3>
-                </div>
+
               </div>
             ))}
           </div>
@@ -556,7 +534,6 @@ export default function Home() {
           ]).map((item, i) => (
             <div key={i} className="gallery-item hover-target">
               <img src={item.img} alt={item.title} />
-              <div className="gallery-caption"><h4>{item.title}</h4></div>
             </div>
           ))}
         </div>

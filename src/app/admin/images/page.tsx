@@ -163,50 +163,98 @@ export default function AdminImages() {
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, key: string | null) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     if (key) {
+      const file = files[0];
       setUploadingKey(key);
-    } else {
-      setGalleryUploading(true);
-    }
+      try {
+        const compressedFile = await compressImage(file);
+        const formData = new FormData();
+        formData.append('file', compressedFile);
 
-    try {
-      const compressedFile = await compressImage(file);
-      const formData = new FormData();
-      formData.append('file', compressedFile);
+        const res = await fetch('/api/admin/images/upload', {
+          method: 'POST',
+          body: formData
+        });
 
-      const res = await fetch('/api/admin/images/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (key) {
+        if (res.ok) {
+          const data = await res.json();
           handleAssetUrlChange(key, data.url);
           showToast('Image uploaded successfully', 'success');
         } else {
-          setNewGalleryUrl(data.url);
-          showToast('Gallery image uploaded successfully', 'success');
+          showToast('Upload failed', 'error');
         }
-      } else {
-        showToast('Upload failed', 'error');
+      } catch (err) {
+        console.error(err);
+        showToast('Error uploading file', 'error');
+      } finally {
+        setUploadingKey(null);
       }
-    } catch (err) {
-      console.error(err);
-      showToast('Error uploading file', 'error');
-    } finally {
-      setUploadingKey(null);
+    } else {
+      setGalleryUploading(true);
+      const uploadedImages: { url: string; title: string }[] = [];
+      let successCount = 0;
+      let failCount = 0;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+          const compressedFile = await compressImage(file);
+          const formData = new FormData();
+          formData.append('file', compressedFile);
+
+          const res = await fetch('/api/admin/images/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            uploadedImages.push({ url: data.url, title: '' });
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          console.error(`Error uploading file ${file.name}:`, err);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        try {
+          const res = await fetch('/api/admin/gallery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(uploadedImages)
+          });
+
+          if (res.ok) {
+            showToast(`Successfully uploaded and added ${successCount} images to gallery`, 'success');
+            fetchData();
+          } else {
+            showToast('Failed to add uploaded images to gallery database', 'error');
+          }
+        } catch (err) {
+          console.error('Error adding images to gallery:', err);
+          showToast('Error adding images to gallery database', 'error');
+        }
+      }
+
+      if (failCount > 0) {
+        showToast(`Failed to upload ${failCount} images`, 'error');
+      }
+
       setGalleryUploading(false);
     }
   };
 
   const handleAddGalleryImage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newGalleryUrl || !newGalleryTitle) {
-      showToast('Please provide both an image and a title', 'error');
+    if (!newGalleryUrl) {
+      showToast('Please provide an image URL', 'error');
       return;
     }
 
@@ -584,7 +632,7 @@ export default function AdminImages() {
 
       {activeTab === 'gallery' && (
         <div>
-          {/* Add to Gallery Form */}
+          {/* Add to Gallery Section */}
           <div
             style={{
               backgroundColor: '#111',
@@ -595,105 +643,127 @@ export default function AdminImages() {
             }}
           >
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#C9A84C', marginBottom: '1.5rem', fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>
-              Add Image to Gallery
+              Add Images to Gallery
             </h3>
             
-            <form onSubmit={handleAddGalleryImage} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', alignItems: 'end' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: '#A3A3A3', marginBottom: '0.5rem' }}>Image Title</label>
-                <input
-                  type="text"
-                  value={newGalleryTitle}
-                  onChange={e => setNewGalleryTitle(e.target.value)}
-                  placeholder="e.g. Wedding buffet spread"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    backgroundColor: '#050505',
-                    border: '1px solid rgba(201, 168, 76, 0.2)',
-                    borderRadius: '4px',
-                    color: '#F5F0E8',
-                    fontSize: '0.9rem'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: '#A3A3A3', marginBottom: '0.5rem' }}>Image URL</label>
-                <input
-                  type="text"
-                  value={newGalleryUrl}
-                  onChange={e => setNewGalleryUrl(e.target.value)}
-                  placeholder="Paste URL or upload file below"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    backgroundColor: '#050505',
-                    border: '1px solid rgba(201, 168, 76, 0.2)',
-                    borderRadius: '4px',
-                    color: '#F5F0E8',
-                    fontSize: '0.9rem'
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                {/* File Upload for Gallery */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2.5rem' }}>
+              {/* Option 1: Multi File Upload */}
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '1px solid rgba(255,255,255,0.05)', paddingRight: '2.5rem' }}>
+                <div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 'bold', color: '#F5F0E8', marginBottom: '0.5rem' }}>
+                    Upload Multiple Files
+                  </h4>
+                  <p style={{ color: '#A3A3A3', fontSize: '0.85rem', lineHeight: '1.4', marginBottom: '1.5rem' }}>
+                    Select one or more images from your computer or phone. They will be uploaded and added to the gallery instantly without any display names.
+                  </p>
+                </div>
+                
                 <label
                   style={{
-                    flex: 1,
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.75rem',
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    color: '#F5F0E8',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    transition: '0.3s',
+                    gap: '0.75rem',
+                    padding: '1rem',
+                    backgroundColor: 'rgba(201, 168, 76, 0.1)',
+                    color: '#C9A84C',
+                    borderRadius: '6px',
+                    cursor: galleryUploading ? 'not-allowed' : 'pointer',
+                    fontSize: '0.95rem',
+                    fontWeight: 'bold',
+                    border: '1px dashed #C9A84C',
+                    transition: 'all 0.3s ease',
                     textAlign: 'center'
                   }}
+                  className="hover-target"
                 >
-                  <Upload size={16} />
-                  {galleryUploading ? 'Uploading...' : 'Upload File'}
+                  <Upload size={20} />
+                  {galleryUploading ? 'Uploading & Processing...' : 'Choose & Upload Photos'}
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={e => handleUpload(e, null)}
                     style={{ display: 'none' }}
                     disabled={galleryUploading}
                   />
                 </label>
-
-                <button
-                  type="submit"
-                  style={{
-                    flex: 1,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.75rem',
-                    backgroundColor: '#C9A84C',
-                    color: '#000',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: 'bold',
-                    border: 'none',
-                    transition: '0.3s'
-                  }}
-                >
-                  <Plus size={16} />
-                  Add Image
-                </button>
               </div>
-            </form>
+
+              {/* Option 2: Add by URL */}
+              <div>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 'bold', color: '#F5F0E8', marginBottom: '0.5rem' }}>
+                  Add Single Image via URL
+                </h4>
+                <p style={{ color: '#A3A3A3', fontSize: '0.85rem', lineHeight: '1.4', marginBottom: '1.25rem' }}>
+                  Paste an image link from another website or CDN (e.g. Unsplash, Google). Name/title is optional.
+                </p>
+                
+                <form onSubmit={handleAddGalleryImage} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#A3A3A3', marginBottom: '0.35rem' }}>Image URL</label>
+                    <input
+                      type="text"
+                      value={newGalleryUrl}
+                      onChange={e => setNewGalleryUrl(e.target.value)}
+                      placeholder="https://images.unsplash.com/..."
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.75rem',
+                        backgroundColor: '#050505',
+                        border: '1px solid rgba(201, 168, 76, 0.2)',
+                        borderRadius: '4px',
+                        color: '#F5F0E8',
+                        fontSize: '0.85rem'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#A3A3A3', marginBottom: '0.35rem' }}>Image Title (Optional)</label>
+                    <input
+                      type="text"
+                      value={newGalleryTitle}
+                      onChange={e => setNewGalleryTitle(e.target.value)}
+                      placeholder="e.g. Elegant Setup"
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.75rem',
+                        backgroundColor: '#050505',
+                        border: '1px solid rgba(201, 168, 76, 0.2)',
+                        borderRadius: '4px',
+                        color: '#F5F0E8',
+                        fontSize: '0.85rem'
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      padding: '0.65rem 1rem',
+                      backgroundColor: '#C9A84C',
+                      color: '#000',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: 'bold',
+                      border: 'none',
+                      transition: '0.3s',
+                      marginTop: '0.5rem'
+                    }}
+                  >
+                    <Plus size={16} />
+                    Add Image URL
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
           {/* Gallery Grid */}
@@ -723,14 +793,14 @@ export default function AdminImages() {
                   <div style={{ height: '200px', backgroundColor: '#050505', position: 'relative' }}>
                     <img
                       src={item.url}
-                      alt={item.title}
+                      alt={item.title || 'Gallery Image'}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
                   <div style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flex: 1 }}>
                     <div style={{ minWidth: 0 }}>
                       <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 'bold', color: '#F5F0E8', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                        {item.title}
+                        {item.title || 'Untitled Image'}
                       </h4>
                     </div>
                     <button

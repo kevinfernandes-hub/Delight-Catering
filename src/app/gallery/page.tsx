@@ -159,8 +159,7 @@ export default function GalleryPage() {
                     {/* Hover Overlay */}
                     <div className="gallery-card-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10, 10, 10, 0.9) 0%, rgba(10, 10, 10, 0.2) 60%, transparent 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '1.5rem', opacity: 0, transition: 'opacity 0.3s ease' }}>
                       <ZoomIn size={24} style={{ color: 'var(--color-gold)', position: 'absolute', top: '1.5rem', right: '1.5rem' }} />
-                      <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>{item.title}</h3>
-                      <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>Click to zoom</p>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>Click to zoom</p>
                     </div>
                   </motion.div>
                 ))}
@@ -232,8 +231,7 @@ export default function GalleryPage() {
               transition={{ delay: 0.2 }}
               style={{ marginTop: '1.5rem', textAlign: 'center' }}
             >
-              <h2 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', fontStyle: 'italic', margin: 0 }}>{selectedImage.title}</h2>
-              <p style={{ color: 'var(--color-gold)', margin: '0.25rem 0 0', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.85rem' }}>Delight Caterers Nagpur</p>
+              <p style={{ color: 'var(--color-gold)', margin: 0, textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.85rem' }}>Delight Caterers Nagpur</p>
             </motion.div>
           </motion.div>
         )}
