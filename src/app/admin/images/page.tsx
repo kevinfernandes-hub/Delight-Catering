@@ -162,8 +162,16 @@ export default function AdminImages() {
     }
   };
 
+  const isVideoFile = (file: File): boolean => {
+    if (file.type && file.type.startsWith('video/')) return true;
+    return /\.(mp4|webm|mov|m4v|avi|mkv|3gp|flv)$/i.test(file.name);
+  };
+
   const prepareFileForUpload = async (file: File): Promise<File> => {
-    if (file.type.startsWith('image/')) {
+    if (isVideoFile(file)) {
+      return file;
+    }
+    if (file.type && file.type.startsWith('image/')) {
       try {
         return await compressImage(file);
       } catch (err) {
@@ -201,14 +209,18 @@ export default function AdminImages() {
             const errData = await res.json();
             errText = errData.error || errData.details || `Upload failed (Status ${res.status})`;
           } catch (_) {
-            if (res.status === 401) errText = 'Unauthorized. Please log in again.';
-            else if (res.status === 413) errText = 'File size is too large for server.';
+            if (res.status === 401) {
+              errText = 'Session expired (401 Unauthorized). Redirecting to login...';
+              setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
+            } else if (res.status === 413) {
+              errText = 'File size is too large for server payload limits.';
+            }
           }
           showToast(errText, 'error');
         }
       } catch (err: any) {
         console.error(err);
-        showToast(`Error uploading file: ${err.message || err}`, 'error');
+        showToast(`Error uploading file: ${err?.message || err}`, 'error');
       } finally {
         setUploadingKey(null);
         e.target.value = '';
@@ -356,8 +368,12 @@ export default function AdminImages() {
           const errorData = await res.json();
           errMessage = errorData.error || errorData.details || `Upload failed (${res.status})`;
         } catch (_) {
-          if (res.status === 401) errMessage = 'Unauthorized. Please log in to admin panel again.';
-          else if (res.status === 413) errMessage = 'Video file size exceeds server payload limits.';
+          if (res.status === 401) {
+            errMessage = 'Session expired (401 Unauthorized). Redirecting to login...';
+            setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
+          } else if (res.status === 413) {
+            errMessage = 'Video file size exceeds server payload limits.';
+          }
         }
         showToast(errMessage, 'error');
       }
