@@ -196,19 +196,29 @@ export default function AdminImages() {
           handleAssetUrlChange(key, data.url);
           showToast('File uploaded successfully', 'success');
         } else {
-          showToast('Upload failed', 'error');
+          let errText = 'Upload failed';
+          try {
+            const errData = await res.json();
+            errText = errData.error || errData.details || `Upload failed (Status ${res.status})`;
+          } catch (_) {
+            if (res.status === 401) errText = 'Unauthorized. Please log in again.';
+            else if (res.status === 413) errText = 'File size is too large for server.';
+          }
+          showToast(errText, 'error');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        showToast('Error uploading file', 'error');
+        showToast(`Error uploading file: ${err.message || err}`, 'error');
       } finally {
         setUploadingKey(null);
+        e.target.value = '';
       }
     } else {
       setGalleryUploading(true);
       const uploadedImages: { url: string; title: string }[] = [];
       let successCount = 0;
       let failCount = 0;
+      let lastErrorMessage = '';
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -228,10 +238,17 @@ export default function AdminImages() {
             successCount++;
           } else {
             failCount++;
+            try {
+              const errData = await res.json();
+              lastErrorMessage = errData.error || errData.details || `Status ${res.status}`;
+            } catch (_) {
+              if (res.status === 401) lastErrorMessage = 'Unauthorized (401)';
+            }
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error(`Error uploading file ${file.name}:`, err);
           failCount++;
+          lastErrorMessage = err.message || String(err);
         }
       }
 
@@ -256,10 +273,11 @@ export default function AdminImages() {
       }
 
       if (failCount > 0) {
-        showToast(`Failed to upload ${failCount} images`, 'error');
+        showToast(`Failed to upload ${failCount} files${lastErrorMessage ? `: ${lastErrorMessage}` : ''}`, 'error');
       }
 
       setGalleryUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -333,14 +351,22 @@ export default function AdminImages() {
         setNewVideoUrl(data.url);
         showToast('Video uploaded successfully. Enter a title and click "Add Video" to save.', 'success');
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        showToast(errorData.error || 'Failed to upload video file', 'error');
+        let errMessage = 'Failed to upload video file';
+        try {
+          const errorData = await res.json();
+          errMessage = errorData.error || errorData.details || `Upload failed (${res.status})`;
+        } catch (_) {
+          if (res.status === 401) errMessage = 'Unauthorized. Please log in to admin panel again.';
+          else if (res.status === 413) errMessage = 'Video file size exceeds server payload limits.';
+        }
+        showToast(errMessage, 'error');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Error uploading video file', 'error');
+      showToast(`Error uploading video file: ${err.message || err}`, 'error');
     } finally {
       setVideoUploading(false);
+      e.target.value = '';
     }
   };
 
