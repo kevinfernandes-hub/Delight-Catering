@@ -19,27 +19,27 @@ async function main() {
     },
     {
       key: 'hero_video',
-      url: 'https://cdn.coverr.co/videos/coverr-preparing-gourmet-food-4074/1080p.mp4',
+      url: 'https://vjs.zencdn.net/v/oceans.mp4',
       title: 'Hero Background Video / Showreel'
     },
     {
       key: 'about_plating',
-      url: 'https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000',
+      url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=1000',
       title: 'About - Plating Image'
     },
     {
       key: 'package_snacks',
-      url: 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800',
+      url: 'https://images.unsplash.com/photo-1541014741259-de529411b96a?auto=format&fit=crop&q=80&w=800',
       title: 'Menu Card - Snacks & Starters'
     },
     {
       key: 'package_biryani',
-      url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800',
+      url: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&q=80&w=800',
       title: 'Menu Card - Signature Biryani'
     },
     {
       key: 'package_buffet',
-      url: 'https://images.unsplash.com/photo-1621841957884-1210fe19b66d?auto=format&fit=crop&q=80&w=800',
+      url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=800',
       title: 'Menu Card - Buffet Service'
     }
   ];

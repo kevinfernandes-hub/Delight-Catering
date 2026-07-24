@@ -73,11 +73,11 @@ function MenuCard({
             alt={title}
             onError={(e) => {
               const fallbackMap: Record<string, string> = {
-                'Snacks & Starters': 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800',
-                'Main Course': 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800',
-                'Buffet Service': 'https://images.unsplash.com/photo-1621841957884-1210fe19b66d?auto=format&fit=crop&q=80&w=800'
+                'Snacks & Starters': 'https://images.unsplash.com/photo-1541014741259-de529411b96a?auto=format&fit=crop&q=80&w=800',
+                'Main Course': 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&q=80&w=800',
+                'Buffet Service': 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=800'
               };
-              (e.target as HTMLImageElement).src = fallbackMap[category] || 'https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000';
+              (e.target as HTMLImageElement).src = fallbackMap[category] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=1000';
             }}
           />
         </CardItem>
@@ -363,12 +363,12 @@ export default function Home() {
         <video
           ref={heroVideoRef}
           id="hero-bg"
-          src={dbAssets.hero_video || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"}
+          src={dbAssets.hero_video || "https://vjs.zencdn.net/v/oceans.mp4"}
           autoPlay
           muted
           loop
           playsInline
-          poster={dbAssets.hero_bg || "https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1200"}
+          poster={dbAssets.hero_bg || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=1200"}
           style={{
             position: 'absolute',
             top: 0,
@@ -417,10 +417,10 @@ export default function Home() {
         <div className="container about-split">
           <div className="about-image reveal reveal-left">
             <img 
-              src={dbAssets.about_plating || "https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000"} 
+              src={dbAssets.about_plating || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=1000"} 
               alt="Exquisite plating" 
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000";
+                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=1000";
               }}
             />
           </div>
@@ -464,21 +464,21 @@ export default function Home() {
           <div className="menu-grid">
             <MenuCard 
               delay="0.1s"
-              image={dbAssets.package_snacks || "https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800"}
+              image={dbAssets.package_snacks || "https://images.unsplash.com/photo-1541014741259-de529411b96a?auto=format&fit=crop&q=80&w=800"}
               category="Snacks & Starters"
               title="Non-Veg Delights"
               description="A tantalizing selection of premium non-veg snacks."
             />
             <MenuCard 
               delay="0.3s"
-              image={dbAssets.package_biryani || "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800"}
+              image={dbAssets.package_biryani || "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&q=80&w=800"}
               category="Main Course"
               title="Signature Chicken Biryani"
               description="Our most praised dish slow-cooked to perfection."
             />
             <MenuCard 
               delay="0.5s"
-              image={dbAssets.package_buffet || "https://images.unsplash.com/photo-1621841957884-1210fe19b66d?auto=format&fit=crop&q=80&w=800"}
+              image={dbAssets.package_buffet || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=800"}
               category="Buffet Service"
               title="Indian & Chinese Flavors"
               description="A grand buffet spread of North Indian and Chinese delicacies."
