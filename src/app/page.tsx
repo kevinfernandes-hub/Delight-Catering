@@ -71,6 +71,14 @@ function MenuCard({
           <img
             src={image}
             alt={title}
+            onError={(e) => {
+              const fallbackMap: Record<string, string> = {
+                'Snacks & Starters': 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&q=80&w=800',
+                'Main Course': 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800',
+                'Buffet Service': 'https://images.unsplash.com/photo-1621841957884-1210fe19b66d?auto=format&fit=crop&q=80&w=800'
+              };
+              (e.target as HTMLImageElement).src = fallbackMap[category] || 'https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000';
+            }}
           />
         </CardItem>
         <div className="card-gradient-overlay"></div>
@@ -408,7 +416,13 @@ export default function Home() {
       <section id="about">
         <div className="container about-split">
           <div className="about-image reveal reveal-left">
-            <img src={dbAssets.about_plating || "https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000"} alt="Exquisite plating" />
+            <img 
+              src={dbAssets.about_plating || "https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000"} 
+              alt="Exquisite plating" 
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000";
+              }}
+            />
           </div>
           <div className="about-content reveal reveal-right">
             <span className="section-tag">Our Story</span>
