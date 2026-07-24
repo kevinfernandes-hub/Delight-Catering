@@ -21,22 +21,27 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                function checkAndReload(msg) {
-                  var str = String(msg || '');
+                function checkAndReload(err) {
+                  var str = String((err && (err.message || err.reason || (err.reason && err.reason.message) || err)) || '');
                   if (str.indexOf('ChunkLoadError') !== -1 || str.indexOf('Failed to load chunk') !== -1 || str.indexOf('Loading chunk') !== -1) {
                     var lastReload = sessionStorage.getItem('chunk_reload');
                     var now = Date.now();
-                    if (!lastReload || now - parseInt(lastReload, 10) > 6000) {
+                    if (!lastReload || now - parseInt(lastReload, 10) > 3000) {
                       sessionStorage.setItem('chunk_reload', now.toString());
+                      if ('caches' in window) {
+                        caches.keys().then(function(keys) {
+                          keys.forEach(function(key) { caches.delete(key); });
+                        });
+                      }
                       window.location.reload();
                     }
                   }
                 }
                 window.addEventListener('error', function(e) {
-                  checkAndReload(e && (e.message || (e.error && e.error.message)));
+                  checkAndReload(e);
                 }, true);
                 window.addEventListener('unhandledrejection', function(e) {
-                  checkAndReload(e && (e.reason && (e.reason.message || e.reason)));
+                  checkAndReload(e);
                 }, true);
               })();
             `
