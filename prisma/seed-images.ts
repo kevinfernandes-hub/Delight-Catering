@@ -47,7 +47,7 @@ async function main() {
   for (const asset of assets) {
     await prisma.imageAsset.upsert({
       where: { key: asset.key },
-      update: { url: asset.url, title: asset.title },
+      update: {}, // Preserve existing user-uploaded URLs in database
       create: asset
     });
   }
