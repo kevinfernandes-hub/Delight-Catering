@@ -81,7 +81,7 @@ export default function GalleryPage() {
         <a href="/" className="hover-target" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(245,240,232,0.7)', fontSize: '13px', letterSpacing: '1px', textDecoration: 'none', textTransform: 'uppercase', fontWeight: 600 }}>
           <ArrowLeft size={16} /> BACK TO HOME
         </a>
-        <div className="logo" style={{ fontSize: '1.8rem' }}>Delight</div>
+        <div className="logo" style={{ fontSize: '1.8rem' }}>Delight Caterers</div>
         <a href="tel:9689330035" className="nav-cta hover-target" style={{ border: '1px solid var(--color-gold)', padding: '0.6rem 1.5rem', color: 'var(--color-gold)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', textDecoration: 'none', background: 'transparent' }}>Call Now</a>
       </nav>
 

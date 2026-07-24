@@ -347,7 +347,7 @@ export default function Home() {
       <div id="cursor-follower" ref={followerRef}></div>
 
       <nav className={`public-nav ${scrolled ? 'scrolled' : ''}`}>
-        <div className="logo">Delight</div>
+        <div className="logo">Delight Caterers</div>
         <div className="nav-links">
           <a href="#about" className="hover-target">Our Story</a>
            <a href="/menu" className="hover-target">Menu Packages</a>
@@ -1043,7 +1043,7 @@ export default function Home() {
       <footer>
         <div className="container">
           <div className="footer-content">
-            <div className="logo">Delight</div>
+            <div className="logo">Delight Caterers</div>
             <div className="footer-nav">
               <a href="#about">Our Story</a>
               <a href="#menu">Menu</a>

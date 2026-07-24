@@ -132,7 +132,7 @@ export default function AdminLayout({
           <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {!isSidebarCollapsed && (
               <Link href="/" style={{ textDecoration: 'none' }}>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#C9A84C', margin: 0 }}>Delight</h1>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#C9A84C', margin: 0 }}>Delight Caterers</h1>
               </Link>
             )}
             <button 

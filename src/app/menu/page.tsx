@@ -197,7 +197,7 @@ export default function MenuPage() {
           <a href="/" className="hover-target" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(245,240,232,0.7)', fontSize: '13px', letterSpacing: '1px', textDecoration: 'none' }}>
             <ArrowLeft size={16} /> BACK TO HOME
           </a>
-          <div className="logo">Delight</div>
+          <div className="logo">Delight Caterers</div>
           <a href="/contact" className="nav-cta hover-target">Enquire Now</a>
         </div>
       </nav>
