@@ -88,7 +88,7 @@ export default function AdminLogin() {
         border: '1px solid rgba(201, 168, 76, 0.2)'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <h1 style={{ fontSize: '2rem', color: '#C9A84C', marginBottom: '0.5rem' }}>Delight Admin</h1>
+          <h1 style={{ fontSize: '2rem', color: '#C9A84C', marginBottom: '0.5rem' }}>Delight Caterers Admin</h1>
           <p style={{ color: '#64748b' }}>Enter your credentials to continue</p>
         </div>
 

@@ -231,7 +231,7 @@ export default function AdminLayout({
              >
                <Menu size={24} />
              </button>
-             <h2 style={{ fontSize: '1.2rem', color: '#C9A84C', marginLeft: '1rem', flex: 1 }}>Delight Admin</h2>
+             <h2 style={{ fontSize: '1.2rem', color: '#C9A84C', marginLeft: '1rem', flex: 1 }}>Delight Caterers Admin</h2>
           </header>
 
           <main style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
