@@ -324,6 +324,15 @@ export default function Home() {
     };
   }, []);
 
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (heroVideoRef.current) {
+      heroVideoRef.current.load();
+      heroVideoRef.current.play().catch((err) => console.log('Hero video autoplay:', err));
+    }
+  }, [dbAssets.hero_video]);
+
   return (
     <div className="main-wrapper" style={{ cursor: 'none' }}>
       <div id="cursor" ref={cursorRef}></div>
@@ -343,12 +352,30 @@ export default function Home() {
       </nav>
 
       <section id="hero">
-        <div 
+        <video
+          ref={heroVideoRef}
           id="hero-bg"
-          style={dbAssets.hero_bg ? { backgroundImage: `url(${dbAssets.hero_bg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.3)' } : {}}
-        ></div>
+          src={dbAssets.hero_video || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"}
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster={dbAssets.hero_bg || "https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1200"}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '120%',
+            objectFit: 'cover',
+            zIndex: 1,
+            filter: 'brightness(0.65) contrast(1.08) saturate(1.15)',
+            background: '#0a0a0a'
+          }}
+        />
         <div className="hero-vignette"></div>
         <canvas id="particles-canvas" ref={canvasRef}></canvas>
+        
         <div className="hero-content">
           <h1 className="hero-headline">
             <span style={{ animationDelay: '0.1s' }}>We </span>

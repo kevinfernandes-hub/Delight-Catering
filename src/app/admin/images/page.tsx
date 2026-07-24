@@ -423,6 +423,8 @@ export default function AdminImages() {
     switch (key) {
       case 'hero_bg':
         return 'Hero Section Background Image';
+      case 'hero_video':
+        return 'Hero Section Video / Showreel (MP4 or Video URL)';
       case 'about_plating':
         return 'About Section Plating Image';
       case 'package_snacks':
@@ -532,15 +534,26 @@ export default function AdminImages() {
                 }}
               >
                 {asset.url ? (
-                  <img
-                    src={asset.url}
-                    alt={asset.key}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
+                  asset.key === 'hero_video' || asset.url.endsWith('.mp4') || asset.url.includes('video') ? (
+                    <video
+                      src={asset.url}
+                      muted
+                      loop
+                      autoPlay
+                      playsInline
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <img
+                      src={asset.url}
+                      alt={asset.key}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  )
                 ) : (
                   <div style={{ textAlign: 'center', color: '#4b5563', padding: '1rem' }}>
                     <ImageIcon size={40} style={{ margin: '0 auto 0.5rem', opacity: 0.5 }} />
-                    <p style={{ fontSize: '0.8rem' }}>No image set (using default gradient)</p>
+                    <p style={{ fontSize: '0.8rem' }}>No asset set (using default)</p>
                   </div>
                 )}
               </div>
@@ -595,7 +608,7 @@ export default function AdminImages() {
                     {uploadingKey === asset.key ? 'Uploading...' : 'Upload File'}
                     <input
                       type="file"
-                      accept="image/*"
+                      accept={asset.key === 'hero_video' ? "video/*,image/*" : "image/*"}
                       onChange={e => handleUpload(e, asset.key)}
                       style={{ display: 'none' }}
                       disabled={uploadingKey !== null}

@@ -18,6 +18,11 @@ async function main() {
       title: 'Hero Background Image'
     },
     {
+      key: 'hero_video',
+      url: 'https://cdn.coverr.co/videos/coverr-preparing-gourmet-food-4074/1080p.mp4',
+      title: 'Hero Background Video / Showreel'
+    },
+    {
       key: 'about_plating',
       url: 'https://images.unsplash.com/photo-1555244162-803834f87a4d?auto=format&fit=crop&q=80&w=1000',
       title: 'About - Plating Image'
@@ -42,7 +47,7 @@ async function main() {
   for (const asset of assets) {
     await prisma.imageAsset.upsert({
       where: { key: asset.key },
-      update: {},
+      update: { url: asset.url, title: asset.title },
       create: asset
     });
   }
