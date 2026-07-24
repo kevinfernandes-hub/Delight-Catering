@@ -162,6 +162,18 @@ export default function AdminImages() {
     }
   };
 
+  const prepareFileForUpload = async (file: File): Promise<File> => {
+    if (file.type.startsWith('image/')) {
+      try {
+        return await compressImage(file);
+      } catch (err) {
+        console.warn('Image compression failed, using original file', err);
+        return file;
+      }
+    }
+    return file;
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, key: string | null) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -170,9 +182,9 @@ export default function AdminImages() {
       const file = files[0];
       setUploadingKey(key);
       try {
-        const compressedFile = await compressImage(file);
+        const fileToUpload = await prepareFileForUpload(file);
         const formData = new FormData();
-        formData.append('file', compressedFile);
+        formData.append('file', fileToUpload);
 
         const res = await fetch('/api/admin/images/upload', {
           method: 'POST',
@@ -182,7 +194,7 @@ export default function AdminImages() {
         if (res.ok) {
           const data = await res.json();
           handleAssetUrlChange(key, data.url);
-          showToast('Image uploaded successfully', 'success');
+          showToast('File uploaded successfully', 'success');
         } else {
           showToast('Upload failed', 'error');
         }
@@ -201,9 +213,9 @@ export default function AdminImages() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         try {
-          const compressedFile = await compressImage(file);
+          const fileToUpload = await prepareFileForUpload(file);
           const formData = new FormData();
-          formData.append('file', compressedFile);
+          formData.append('file', fileToUpload);
 
           const res = await fetch('/api/admin/images/upload', {
             method: 'POST',
@@ -306,35 +318,28 @@ export default function AdminImages() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit: 400MB
-    const maxSizeBytes = 400 * 1024 * 1024;
-    if (file.size > maxSizeBytes) {
-      setVideoFileWarning('File size exceeds 400MB. Larger videos will take a long time to load and may fail to save. Consider using a YouTube link or CDN URL instead.');
-      if (file.size > 500 * 1024 * 1024) {
-        showToast('File is too large (exceeds 500MB limit for database storage)', 'error');
-        return;
-      }
-    } else {
-      setVideoFileWarning(null);
-    }
-
     setVideoUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64Url = event.target?.result as string;
-        setNewVideoUrl(base64Url);
-        showToast('Video processed successfully. Enter a title and click "Add Video" to save.', 'success');
-        setVideoUploading(false);
-      };
-      reader.onerror = () => {
-        showToast('Failed to read video file', 'error');
-        setVideoUploading(false);
-      };
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/admin/images/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setNewVideoUrl(data.url);
+        showToast('Video uploaded successfully. Enter a title and click "Add Video" to save.', 'success');
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        showToast(errorData.error || 'Failed to upload video file', 'error');
+      }
     } catch (err) {
       console.error(err);
-      showToast('Error uploading video', 'error');
+      showToast('Error uploading video file', 'error');
+    } finally {
       setVideoUploading(false);
     }
   };
@@ -534,7 +539,7 @@ export default function AdminImages() {
                 }}
               >
                 {asset.url ? (
-                  asset.key === 'hero_video' || asset.url.endsWith('.mp4') || asset.url.includes('video') ? (
+                  asset.key === 'hero_video' || /\.(mp4|webm|mov|m4v|ogg)$/i.test(asset.url) || asset.url.includes('video') ? (
                     <video
                       src={asset.url}
                       muted
@@ -963,10 +968,10 @@ export default function AdminImages() {
                     }}
                   >
                     <Upload size={16} />
-                    {newVideoUrl ? 'Video Loaded (Ready to Add)' : 'Upload MP4 File'}
+                    {newVideoUrl ? 'Video Uploaded (Ready to Add)' : 'Upload Video File'}
                     <input
                       type="file"
-                      accept="video/mp4"
+                      accept="video/*"
                       onChange={handleVideoUpload}
                       style={{ display: 'none' }}
                       disabled={videoUploading}
