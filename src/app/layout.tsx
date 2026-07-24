@@ -20,16 +20,25 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              window.addEventListener('error', function(e) {
-                if (e && e.message && (e.message.indexOf('ChunkLoadError') !== -1 || e.message.indexOf('Failed to load chunk') !== -1 || e.message.indexOf('Loading chunk') !== -1)) {
-                  var lastReload = sessionStorage.getItem('chunk_reload');
-                  var now = Date.now();
-                  if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
-                    sessionStorage.setItem('chunk_reload', now.toString());
-                    window.location.reload();
+              (function() {
+                function checkAndReload(msg) {
+                  var str = String(msg || '');
+                  if (str.indexOf('ChunkLoadError') !== -1 || str.indexOf('Failed to load chunk') !== -1 || str.indexOf('Loading chunk') !== -1) {
+                    var lastReload = sessionStorage.getItem('chunk_reload');
+                    var now = Date.now();
+                    if (!lastReload || now - parseInt(lastReload, 10) > 6000) {
+                      sessionStorage.setItem('chunk_reload', now.toString());
+                      window.location.reload();
+                    }
                   }
                 }
-              }, true);
+                window.addEventListener('error', function(e) {
+                  checkAndReload(e && (e.message || (e.error && e.error.message)));
+                }, true);
+                window.addEventListener('unhandledrejection', function(e) {
+                  checkAndReload(e && (e.reason && (e.reason.message || e.reason)));
+                }, true);
+              })();
             `
           }}
         />
