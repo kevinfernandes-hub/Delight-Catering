@@ -580,44 +580,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section style={{ padding: '7rem 0', position: 'relative' }}>
-        <div className="container reveal">
-          <div className="section-header reveal">
-            <span className="section-tag">Packages</span>
-            <h2>Transparent Pricing.</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2.5rem', marginTop: '4rem' }}>
-            {[
-              { name: 'Starter', price: '₹299', perHead: 'per head', items: ['Up to 50 guests', 'Vegetarian menu', 'Basic setup', 'Standard service'] },
-              { name: 'Classic', price: '₹599', perHead: 'per head', items: ['Up to 200 guests', 'Veg & Non-Veg', 'Premium setup', 'Professional staff', 'Beverages included'], featured: true },
-              { name: 'Premium', price: '₹899', perHead: 'per head', items: ['Unlimited guests', 'Customized menu', 'Luxury setup', 'Senior chef', 'Beverages & desserts', 'Decoration'] }
-            ].map((pkg, i) => (
-              <div key={i} className={`pricing-card ${pkg.featured ? 'featured' : ''}`}>
-                {pkg.featured && (
-                  <div className="featured-badge">
-                    <span>★ MOST POPULAR</span>
-                  </div>
-                )}
-                <div>
-                  <h3>{pkg.name}</h3>
-                  <div className="pricing-card-price">{pkg.price}</div>
-                  <p className="pricing-card-period">{pkg.perHead}</p>
-                  <ul className="pricing-card-items">
-                    {pkg.items.map((item, j) => (
-                      <li key={j}>
-                        <span className="check">✓</span> {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <button className="btn btn-gold btn-shimmer hover-target" style={{ width: '100%', padding: '0.8rem', background: pkg.featured ? 'var(--color-gold)' : 'transparent', border: '1px solid var(--color-gold)', color: pkg.featured ? 'var(--color-bg)' : 'var(--color-gold)', cursor: 'pointer', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem' }}>Get Quote</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Video Section */}
       <section style={{ padding: '7rem 0', backgroundColor: '#0a0a0a', borderTop: '1px solid rgba(201, 168, 76, 0.1)', borderBottom: '1px solid rgba(201, 168, 76, 0.1)' }}>
         <div className="container reveal">
