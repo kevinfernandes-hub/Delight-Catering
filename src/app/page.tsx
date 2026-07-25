@@ -169,6 +169,7 @@ export default function Home() {
   const [dbGallery, setDbGallery] = useState<{ img: string; title: string }[]>([]);
   const [dbVideos, setDbVideos] = useState<{ id: string; url: string; title: string }[]>([]);
   const [activeLightboxVideo, setActiveLightboxVideo] = useState<{ id: string; url: string; title: string } | null>(null);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -201,6 +202,8 @@ export default function Home() {
         }
       } catch (err) {
         console.error('Failed to fetch dynamic media:', err);
+      } finally {
+        setAssetsLoaded(true);
       }
     };
     fetchMedia();
@@ -333,13 +336,14 @@ export default function Home() {
   }, []);
 
   const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const heroVideoSrc = dbAssets.hero_video || (assetsLoaded ? "https://vjs.zencdn.net/v/oceans.mp4" : undefined);
 
   useEffect(() => {
-    if (heroVideoRef.current) {
+    if (heroVideoRef.current && heroVideoSrc) {
       heroVideoRef.current.load();
       heroVideoRef.current.play().catch((err) => console.log('Hero video autoplay:', err));
     }
-  }, [dbAssets.hero_video]);
+  }, [heroVideoSrc]);
 
   return (
     <div className="main-wrapper" style={{ cursor: 'none' }}>
@@ -363,7 +367,7 @@ export default function Home() {
         <video
           ref={heroVideoRef}
           id="hero-bg"
-          src={dbAssets.hero_video || "https://vjs.zencdn.net/v/oceans.mp4"}
+          src={heroVideoSrc}
           autoPlay
           muted
           loop
