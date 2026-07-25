@@ -170,6 +170,7 @@ export default function Home() {
   const [dbVideos, setDbVideos] = useState<{ id: string; url: string; title: string }[]>([]);
   const [activeLightboxVideo, setActiveLightboxVideo] = useState<{ id: string; url: string; title: string } | null>(null);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -354,14 +355,37 @@ export default function Home() {
         <div className="logo">Delight Caterers</div>
         <div className="nav-links">
           <a href="#about" className="hover-target">Our Story</a>
-           <a href="/menu" className="hover-target">Menu Packages</a>
+          <a href="/menu" className="hover-target">Menu Packages</a>
           <a href="#menu" className="hover-target">Signature Menu</a>
           <a href="#how-it-works" className="hover-target">Experience</a>
           <a href="/gallery" className="hover-target">Gallery</a>
           <a href="/admin/login" className="hover-target" style={{ color: 'var(--color-gold)' }}>Admin</a>
         </div>
         <a href="#cta" className="nav-cta hover-target">Book Now</a>
+
+        <button 
+          className={`hamburger ${mobileMenuOpen ? 'open' : ''}`}
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle Navigation Menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </nav>
+
+      {/* Mobile Navigation Drawer */}
+      <div className={`mobile-nav-overlay ${mobileMenuOpen ? 'open' : ''}`}>
+        <div className="mobile-nav-links">
+          <a href="#about" onClick={() => setMobileMenuOpen(false)}>Our Story</a>
+          <a href="/menu" onClick={() => setMobileMenuOpen(false)}>Menu Packages</a>
+          <a href="#menu" onClick={() => setMobileMenuOpen(false)}>Signature Menu</a>
+          <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>Experience</a>
+          <a href="/gallery" onClick={() => setMobileMenuOpen(false)}>Gallery</a>
+          <a href="/admin/login" onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--color-gold)' }}>Admin</a>
+          <a href="#cta" className="btn btn-gold" onClick={() => setMobileMenuOpen(false)} style={{ marginTop: '1rem' }}>Book Now</a>
+        </div>
+      </div>
 
       <section id="hero">
         <video
@@ -372,7 +396,7 @@ export default function Home() {
           muted
           loop
           playsInline
-          poster={dbAssets.hero_bg || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=1200"}
+          poster={dbAssets.hero_bg || undefined}
           style={{
             position: 'absolute',
             top: 0,
